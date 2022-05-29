@@ -9,9 +9,9 @@ leetcodeChannel = None
 
 timezone="America/New_York"
 start_time = {
-    'hour': "8",
-    'minute': "0",
-    'second': "0"
+    'hour': "08",
+    'minute': "00",
+    'second': "00"
 }
 end_time = {
     'hour': "23",
@@ -182,7 +182,7 @@ async def leetcode_end(bot):
     unfinishedUser = ""
     unfinishedCount = 0
     for userID, value in leetcodeParticipantID.items():
-        user = bot.fetch_user(userID)
+        user = await bot.fetch_user(userID)
         if value == 1:
             completedCount += 1
             completedUser += f"{completedCount}. {user.name}"
@@ -192,8 +192,8 @@ async def leetcode_end(bot):
             unfinishedUser += f"{unfinishedCount}. {user.name}"
     content = "Today's leetcode daily coding challenge has ended.\n"
     if completedCount > 0:
-        content += f"Completed participants (total: {completedCount})" + completedUser
+        content += f"Completed participants (total: {completedCount}):\n" + completedUser
     if unfinishedCount > 0:
-        content += f"Unfinished participants (total: {unfinishedCount})" + unfinishedUser
+        content += f"Unfinished participants (total: {unfinishedCount}):\n" + unfinishedUser
 
     await leetcodeChannel.send(content)

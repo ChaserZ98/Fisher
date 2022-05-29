@@ -53,7 +53,7 @@ async def on_ready() -> None:
 
     print(f"Registered commands and events in {round(time.perf_counter() - time_start, 2)}s")
 
-@tasks.loop(minutes=1.0)
+@tasks.loop(minutes=30.0)
 async def status_task() -> None:
     statues = ["fishing", 'fishing a fish', 'fishing a fish fishing', 'fishing a fish fishing a fish', 'fishing a SpongeBob!!!']
     await bot.change_presence(activity=discord.Game(random.choice(statues)))
@@ -78,17 +78,24 @@ async def quit(ctx, *, args=None) -> None:
 @bot.command(
     aliases=['lc'],
     brief="leetcode command.",
-    help='leetcode help command',
+    help='<option>:' +
+    "\n\tinit - Equivalent to [channel + start]. Set leetcode channel and start the daily challenge"
+    "\n\tjoin - Join the daily coding challenge" +
+    "\n\tlist - Show current participants" +
+    "\n\tchannel - Set current channel as the channel for the leetcode daily challenge" +
+    "\n\tstart - Start the daily challenge" +
+    "\n\tstop - Stop the daily challenge" +
+    "\n\ttoday - show today's leetcode problem"
+    ,
     description="leetcode command description."
 )
-async def leetcode(ctx, option=None, *, args=None) -> None:
-    
+async def leetcode(ctx, option, *, args=None) -> None:
     if lc.leetcodeChannel is None and (option != 'channel' and option != 'init'):
         await ctx.send("You need to set the channel first.")
         return
     if option is None:
         return
-    if option == 'init' and args is None:
+    if option == 'init' and lc.leetcodeChannel is None and args is None:
         lc.leetcodeChannel = ctx.channel
         await ctx.send(f"Set leetcode channel to {ctx.channel}")
         await lc.addLeetcodeSchedule(botScheduler, bot)
@@ -111,9 +118,15 @@ async def leetcode(ctx, option=None, *, args=None) -> None:
         await ctx.send(embed=lc.getDailyCodingChallenge())
 
 @bot.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     if message.author == bot.user or message.author.bot:
         return
+    
+    if message.content.startswith("https://leetcode.com/submissions/detail"):
+        userID = message.author.id
+        if userID in lc.leetcodeParticipantID and lc.leetcodeParticipantID[userID] == 0:
+            await message.add_reaction("✅")
+            lc.leetcodeParticipantID[userID] = 1
 
     await bot.process_commands(message)
 
