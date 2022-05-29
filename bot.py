@@ -3,6 +3,7 @@ import os
 import platform
 import asyncio
 import random
+from sched import scheduler
 import time
 
 from traceback import print_exc
@@ -12,16 +13,20 @@ from discord.ext import commands
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from leetcode import *
+
+import leetcode_lib as lc
 
 
+# suppress event loop exception while exiting on windows system
 if platform.system() == 'Windows':
 	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-description = "This is a test bot by ChaserZ"
+description = "This is a personal bot made by ChaserZ"
 bot = commands.Bot(command_prefix='$', description=description)
 
 testChannelID = 979492901019074631
+
+botScheduler = None
 
 @bot.event
 async def on_ready() -> None:
@@ -41,9 +46,9 @@ async def on_ready() -> None:
     status_task.start()
     
     print(f"Starting scheduler...", end="")
-    scheduler = AsyncIOScheduler()
-    await addLeetcodeSchedule(scheduler, bot, mainChannel)
-    scheduler.start()
+    global botScheduler
+    botScheduler = AsyncIOScheduler()
+    botScheduler.start()
     print("Done!")
 
     print(f"Registered commands and events in {round(time.perf_counter() - time_start, 2)}s")
@@ -53,6 +58,7 @@ async def status_task() -> None:
     statues = ["fishing", 'fishing a fish', 'fishing a fish fishing', 'fishing a fish fishing a fish', 'fishing a SpongeBob!!!']
     await bot.change_presence(activity=discord.Game(random.choice(statues)))
 
+# exit command
 @commands.has_permissions(administrator=True)
 @bot.command(
     aliases=['q', 'exit'],
@@ -68,6 +74,7 @@ async def quit(ctx, *, args=None) -> None:
     await bot.close()
     print("Done!")
 
+# leetcode command
 @bot.command(
     aliases=['lc'],
     brief="leetcode command.",
@@ -75,16 +82,33 @@ async def quit(ctx, *, args=None) -> None:
     description="leetcode command description."
 )
 async def leetcode(ctx, option=None, *, args=None) -> None:
+    
+    if lc.leetcodeChannel is None and (option != 'channel' and option != 'init'):
+        await ctx.send("You need to set the channel first.")
+        return
     if option is None:
         return
-    if option == 'join':
-        if ctx.author.id in leetcodeParticipantID:
+    if option == 'init' and args is None:
+        lc.leetcodeChannel = ctx.channel
+        await ctx.send(f"Set leetcode channel to {ctx.channel}")
+        await lc.addLeetcodeSchedule(botScheduler, bot)
+    elif option == 'join' and args is None:
+        if ctx.author.id in lc.leetcodeParticipantID:
             await ctx.send(ctx.author.mention + " you have already joined the leetcode daily coding challenge!")
         else:
-            leetcodeParticipantID[ctx.author.id] = 0
+            lc.leetcodeParticipantID[ctx.author.id] = 0
             await ctx.send(ctx.author.mention + " you successfully join the leetcode daily challenge!")
-    elif option == 'list':
-        await showLeetcodeParticipants(bot, leetcodeParticipantID, ctx.channel)
+    elif option == 'list' and args is None:
+        await lc.showLeetcodeParticipants(bot, lc.leetcodeParticipantID, ctx.channel)
+    elif option == 'channel' and args is None:
+        lc.leetcodeChannel = ctx.channel
+        await ctx.send(f"Set leetcode channel to {ctx.channel}")
+    elif option == 'start' and args is None:
+        await lc.addLeetcodeSchedule(botScheduler, bot)
+    elif option == 'stop' and args is None:
+        await lc.removeLeetcodeSchedule(botScheduler)
+    elif option == 'today' and args is None:
+        await ctx.send(embed=lc.getDailyCodingChallenge())
 
 @bot.event
 async def on_message(message):
@@ -92,10 +116,6 @@ async def on_message(message):
         return
 
     await bot.process_commands(message)
-
-async def print_help_message(channel):
-    message = "help message"
-    await channel.send(message)
 
 try:
     with open("./bot.json", 'r') as token_file:

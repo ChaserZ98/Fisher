@@ -1,9 +1,23 @@
+from http.client import UnknownTransferEncoding
 from apscheduler.triggers.cron import CronTrigger
 import requests
 import discord
 import json
 
 leetcodeParticipantID = {}
+leetcodeChannel = None
+
+timezone="America/New_York"
+start_time = {
+    'hour': "8",
+    'minute': "0",
+    'second': "0"
+}
+end_time = {
+    'hour': "23",
+    'minute': "59",
+    'second': "59"
+}
 
 def getDailyCodingChallenge():
     leetcode_url = "https://leetcode.com"
@@ -101,19 +115,7 @@ def getDailyCodingChallenge():
 
     return embed
 
-async def addLeetcodeSchedule(scheduler, bot, channel):
-    timezone="America/New_York"
-    start_time = {
-        'hour': "7",
-        'minute': "9",
-        'second': "50"
-    }
-    end_time = {
-        'hour': "23",
-        'minute': "59",
-        'second': "59"
-    }
-
+async def addLeetcodeSchedule(scheduler, bot):
     scheduler.add_job(
         leetcode_start,
         CronTrigger(
@@ -122,7 +124,8 @@ async def addLeetcodeSchedule(scheduler, bot, channel):
             second=start_time['second'],
             timezone=timezone
         ),
-        args=(bot, channel)
+        args=(bot,),
+        id="leetcode start"
     )
     scheduler.add_job(
         leetcode_end,
@@ -132,8 +135,19 @@ async def addLeetcodeSchedule(scheduler, bot, channel):
             second=end_time['second'],
             timezone=timezone
         ),
-        args=(bot, channel)
+        args=(bot,),
+        id="leetcode end"
     )
+    await leetcodeChannel.send(
+        f"Leetcode daily coding challenge job all set.\n" +
+        f"Daily start time: {start_time['hour']}:{start_time['minute']}:{start_time['second']}\n" +
+        f"Daily end time: {end_time['hour']}:{end_time['minute']}:{end_time['second']}"
+    )
+
+async def removeLeetcodeSchedule(scheduler):
+    scheduler.remove_job("leetcode start")
+    scheduler.remove_job("leetcode end")
+    await leetcodeChannel.send("Leetcode daily coding challenge job is removed.")
 
 async def showLeetcodeParticipants(bot, leetcodeParticipantID, channel):
     validNum = 0
@@ -148,20 +162,38 @@ async def showLeetcodeParticipants(bot, leetcodeParticipantID, channel):
     
     await channel.send(message)
 
-async def leetcode_start(bot, channel):
+async def leetcode_start(bot):
     await bot.wait_until_ready()
 
     embed = getDailyCodingChallenge()
-    await channel.send(embed=embed)
+    await leetcodeChannel.send(embed=embed)
 
     message = "The new daily coding challenge has released!"
     for id in leetcodeParticipantID:
         user = await bot.fetch_user(id)
         if user:
             message += user.mention
-    await channel.send(message)
+    await leetcodeChannel.send(message)
 
-async def leetcode_end(bot, testChannelID):
+async def leetcode_end(bot):
     await bot.wait_until_ready()
-    mainChannel = bot.get_channel(testChannelID)
-    await mainChannel.send("func")
+    completedUser = ""
+    completedCount = 0
+    unfinishedUser = ""
+    unfinishedCount = 0
+    for userID, value in leetcodeParticipantID.items():
+        user = bot.fetch_user(userID)
+        if value == 1:
+            completedCount += 1
+            completedUser += f"{completedCount}. {user.name}"
+            leetcodeParticipantID[userID] = 0
+        else:
+            unfinishedCount += 1
+            unfinishedUser += f"{unfinishedCount}. {user.name}"
+    content = "Today's leetcode daily coding challenge has ended.\n"
+    if completedCount > 0:
+        content += f"Completed participants (total: {completedCount})" + completedUser
+    if unfinishedCount > 0:
+        content += f"Unfinished participants (total: {unfinishedCount})" + unfinishedUser
+
+    await leetcodeChannel.send(content)
