@@ -3,16 +3,15 @@ import os
 import platform
 import asyncio
 import random
-from sched import scheduler
 import time
 
 from traceback import print_exc
 import discord
+import discord.ext.commands
 from discord.ext import tasks
 from discord.ext import commands
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 import leetcode_lib as lc
 
@@ -22,7 +21,13 @@ if platform.system() == 'Windows':
 	asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 description = "This is a personal bot made by ChaserZ"
-bot = commands.Bot(command_prefix='$', description=description)
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(
+    command_prefix='$',
+    description=description,
+    intents=intents
+)
 
 testChannelID = 979492901019074631
 
@@ -30,6 +35,7 @@ botScheduler = None
 
 @bot.event
 async def on_ready() -> None:
+    # show configuration
     print(f"Connected to Discord API in {round(time.perf_counter() - discord_time_start, 2)}s")
     print(" Bot Configuration ".center(30, '-'))
     print(f"Logged in bot: {bot.user}")
@@ -40,11 +46,18 @@ async def on_ready() -> None:
     mainChannel = bot.get_channel(testChannelID)
     await mainChannel.send(f"{bot.user.name} has connected to Discord!")
 
-    # scheduler
+    # create data directory and leetcode data directory if not exists
+    if not os.path.exists("./data/leetcode"):
+        os.makedirs("./data/leetcode")
+
+    lc.synchronize_guild_status()
+
     time_start = time.perf_counter()
 
+    # start status loop
     status_task.start()
     
+    # start scheduler
     print(f"Starting scheduler...", end="")
     global botScheduler
     botScheduler = AsyncIOScheduler()
@@ -79,54 +92,77 @@ async def quit(ctx, *, args=None) -> None:
     aliases=['lc'],
     brief="leetcode command.",
     help='<option>:' +
-    "\n\tinit - Equivalent to [channel + start]. Set leetcode channel and start the daily challenge"
-    "\n\tjoin - Join the daily coding challenge" +
-    "\n\tlist - Show current participants" +
-    "\n\tchannel - Set current channel as the channel for the leetcode daily challenge" +
-    "\n\tstart - Start the daily challenge" +
-    "\n\tstop - Stop the daily challenge" +
-    "\n\ttoday - show today's leetcode problem"
+    "\n\tinit - Initialize the coding challenge. This command will overwrite any existed data." +
+    "\n\tresume - Initialize the coding challenge based on the stored data." +
+    "\n\tclean - Stop the daily coding challenge and clean all data." +
+    "\n\tjoin - Join the daily coding challenge." +
+    "\n\tquit - Quit the daily coding challenge." +
+    "\n\tchannel - Set current channel as the channel for the leetcode daily challenge." +
+    "\n\tstart - Start the daily challenge." +
+    "\n\tstop - Stop the daily challenge." +
+    "\n\tlist - Show current participants." +
+    "\n\t[leaderboard|score] - Show history score." +
+    "\n\ttoday - Show today's leetcode problem."
     ,
     description="leetcode command description."
 )
-async def leetcode(ctx, option, *, args=None) -> None:
-    if lc.leetcodeChannel is None and (option != 'channel' and option != 'init'):
-        await ctx.send("You need to set the channel first.")
+async def leetcode(ctx: discord.ext.commands.Context, option=None, *, args=None) -> None:
+    if (ctx.guild.id not in lc.guild_status or not lc.guild_status[ctx.guild.id]) and (option != 'init' and option != 'resume' and option != 'clean'):
+        await ctx.send(
+            "You have not initialized the leetcode function in this server.\n" +
+            "Please switch to any text channel and enter `$leetcode init` to initialize.\n" +
+            "If you want to initialize using your previous data, please enter `$leetcode resume` to resume."
+        )
         return
     if option is None:
         return
-    if option == 'init' and lc.leetcodeChannel is None and args is None:
-        lc.leetcodeChannel = ctx.channel
-        await ctx.send(f"Set leetcode channel to {ctx.channel}")
-        await lc.addLeetcodeSchedule(botScheduler, bot)
-    elif option == 'join' and args is None:
-        if ctx.author.id in lc.leetcodeParticipantID:
-            await ctx.send(ctx.author.mention + " you have already joined the leetcode daily coding challenge!")
+    if option == 'init' and args is None:
+        await lc.initialize(ctx.guild, ctx.channel, botScheduler)
+    elif option == 'resume' and args is None:
+        if ctx.guild.id in lc.guild_status:
+            await lc.resume(ctx.guild, ctx.channel, botScheduler)
         else:
-            lc.leetcodeParticipantID[ctx.author.id] = 0
-            await ctx.send(ctx.author.mention + " you successfully join the leetcode daily challenge!")
-    elif option == 'list' and args is None:
-        await lc.showLeetcodeParticipants(bot, lc.leetcodeParticipantID, ctx.channel)
+            await ctx.send("You cannot resume since there is no stored data on the server.\nPlease enter `$leetcode init` instead.")
+    elif option== 'clean' and args is None:
+        if ctx.guild.id in lc.guild_status:
+            await lc.clean(ctx.guild, botScheduler)
+        await ctx.send("All data has been cleaned.")
+    elif option == 'join' and args is None:
+        await lc.join(ctx.author, ctx.guild)
+    elif option == 'quit' and args is None:
+        await lc.quit(ctx.author, ctx.guild)
     elif option == 'channel' and args is None:
-        lc.leetcodeChannel = ctx.channel
+        lc.set_leetcode_channel(ctx.guild, ctx.channel)
         await ctx.send(f"Set leetcode channel to {ctx.channel}")
     elif option == 'start' and args is None:
-        await lc.addLeetcodeSchedule(botScheduler, bot)
+        await lc.add_leetcode_schedule(botScheduler, ctx.guild)
     elif option == 'stop' and args is None:
-        await lc.removeLeetcodeSchedule(botScheduler)
+        await lc.remove_leetcode_schedule(botScheduler, ctx.guild)
+    elif option == 'list' and args is None:
+        await lc.show_leetcode_participants(ctx.guild)
+    elif (option == 'leaderboard' or option == 'score') and args is None:
+        await lc.show_leaderboard(ctx.guild)
     elif option == 'today' and args is None:
-        await ctx.send(embed=lc.getDailyCodingChallenge())
+        await lc.show_today_challenge(ctx.guild)
 
 @bot.event
 async def on_message(message: discord.Message):
     if message.author == bot.user or message.author.bot:
         return
     
-    if message.content.startswith("https://leetcode.com/submissions/detail"):
-        userID = message.author.id
-        if userID in lc.leetcodeParticipantID and lc.leetcodeParticipantID[userID] == 0:
+    if message.content.startswith("https://leetcode.com/submissions/detail") and message.guild.id in lc.guild_status and lc.guild_status[message.guild.id]:
+        leetcode_role = lc.get_leetcode_role(message.guild)
+        daily_report = lc.get_daily_report(message.guild)
+        history_score = lc.get_history_score(message.guild)
+        if message.author in leetcode_role.members and daily_report[message.author.id] == 0:
             await message.add_reaction("✅")
-            lc.leetcodeParticipantID[userID] = 1
+            daily_report[message.author.id] = 1
+            lc.update_daily_report(message.guild, daily_report)
+
+            history_score[message.author.id] += 1
+            lc.update_history_score(message.guild, history_score)
+            
+            
 
     await bot.process_commands(message)
 
