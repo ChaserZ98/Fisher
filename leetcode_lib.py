@@ -350,7 +350,7 @@ async def add_leetcode_schedule(scheduler, guild: discord.Guild):
             timezone=timezone
         ),
         args=(guild,),
-        misifre_grace_time=None,
+        misfire_grace_time=None,
         id=f"leetcode start {guild.id}"
     )
     scheduler.add_job(
@@ -396,20 +396,16 @@ async def leetcode_start(guild: discord.Guild):
 async def leetcode_end(guild: discord.Guild):
     leetcode_channel = get_leetcode_channel(guild)
     daily_report = get_daily_report(guild)
-    history_score = get_history_score(guild)
     completedUser = ""
     completedCount = 0
     unfinishedUser = ""
     unfinishedCount = 0
     for user_id, value in daily_report.items():
         user = guild.get_member(user_id)
-        if user_id not in history_score:
-            history_score[user_id] = 0
         if value == 1:
             completedCount += 1
             completedUser += f"\n{completedCount}. {user.name}"
             daily_report[user_id] = 0
-            history_score[user_id] += 1
         else:
             unfinishedCount += 1
             unfinishedUser += f"\n{unfinishedCount}. {user.name}"
@@ -421,7 +417,6 @@ async def leetcode_end(guild: discord.Guild):
     await leetcode_channel.send(content)
 
     update_daily_report(guild, daily_report)
-    update_history_score(guild, history_score)
 
 def get_daily_coding_challenge():
     leetcode_url = "https://leetcode.com"
