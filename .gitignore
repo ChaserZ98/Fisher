@@ -248,3 +248,4 @@ fabric.properties
 # ignore files in project
 bot.json
 data
+*.err
