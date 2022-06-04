@@ -409,11 +409,11 @@ async def leetcode_end(guild: discord.Guild):
         else:
             unfinishedCount += 1
             unfinishedUser += f"\n{unfinishedCount}. {user.name}"
-    content = "Today's leetcode daily coding challenge has ended.\n"
+    content = "Today's leetcode daily coding challenge has ended."
     if completedCount > 0:
-        content += f"Completed participants (total: {completedCount}):" + completedUser
+        content += f"\nCompleted participants (total: {completedCount}):" + completedUser
     if unfinishedCount > 0:
-        content += f"Unfinished participants (total: {unfinishedCount}):" + unfinishedUser
+        content += f"\nUnfinished participants (total: {unfinishedCount}):" + unfinishedUser
     await leetcode_channel.send(content)
 
     update_daily_report(guild, daily_report)
