@@ -102,11 +102,12 @@ async def quit(ctx, *, args=None) -> None:
     "\n\tstop - Stop the daily challenge." +
     "\n\tlist - Show current participants." +
     "\n\t[leaderboard|score] - Show history score." +
-    "\n\ttoday - Show today's leetcode problem."
+    "\n\ttoday - Show today's leetcode problem." +
+    "\n\t[question|q] <question_id> - Show the leetcode question with the specific question id."
     ,
     description="leetcode command description."
 )
-async def leetcode(ctx: discord.ext.commands.Context, option=None, *, args=None) -> None:
+async def leetcode(ctx: discord.ext.commands.Context, option=None, *, args: str=None) -> None:
     if (ctx.guild.id not in lc.guild_status or not lc.guild_status[ctx.guild.id]) and (option != 'init' and option != 'resume' and option != 'clean'):
         await ctx.send(
             "You have not initialized the leetcode function in this server.\n" +
@@ -144,6 +145,18 @@ async def leetcode(ctx: discord.ext.commands.Context, option=None, *, args=None)
         await lc.show_leaderboard(ctx.guild)
     elif option == 'today' and args is None:
         await lc.show_today_challenge(ctx.guild)
+    elif (option == 'question' or option == 'q') and args:
+        args = args.split()
+        if len(args) == 1 and args[0].isnumeric():
+            question_id = int(args[0])
+            if question_id > 0:
+                await lc.show_question_by_id(ctx.guild, question_id)
+            else:
+                await ctx.send("Error: Invalid question id.\nPlease enter `$[lc|leetcode] [q|question] question_id` where `question_id` is a valid number.")
+        else:
+            await ctx.send("Error: Invalid question id.\nPlease enter `$[lc|leetcode] [q|question] question_id` where `question_id` is a valid number.")
+    elif option != None:
+        await ctx.send("Unknown option.\nPlease enter `$help [lc|leetcode]` for more info about `leetcode` command.")
 
 @bot.event
 async def on_message(message: discord.Message):

@@ -7,6 +7,10 @@ import pickle
 from apscheduler.triggers.cron import CronTrigger
 import discord
 
+EMBED_FIELD_VALUE_LIMIT = 1024
+
+leetcode_url = "https://leetcode.com"
+
 data_directory = "./data"
 leetcode_data_directory = "leetcode"
 
@@ -418,8 +422,16 @@ async def leetcode_end(guild: discord.Guild):
 
     update_daily_report(guild, daily_report)
 
-def get_daily_coding_challenge():
-    leetcode_url = "https://leetcode.com"
+async def show_question_by_id(guild: discord.Guild, question_id: int):
+    leetcode_channel = get_leetcode_channel(guild)
+    embed = get_question_by_id(question_id)
+    if not embed:
+        await leetcode_channel.send("Error: Invalid question id.\nPlease enter `$[lc|leetcode] [q|question] question_id` where `question_id` is a valid number.")
+    else:
+        await leetcode_channel.send(embed=embed)
+
+def get_daily_coding_challenge() -> discord.Embed():
+    global leetcode_url, EMBED_FIELD_VALUE_LIMIT
     post_url = leetcode_url + "/graphql"
     data = {
         "query": "query questionOfToday \
@@ -431,6 +443,7 @@ def get_daily_coding_challenge():
                         link\
                         question{\
                             questionId\
+                            questionFrontendId\
                             title\
                             titleSlug\
                             acRate\
@@ -453,63 +466,234 @@ def get_daily_coding_challenge():
     }
     # header = {'content-type': 'application/json'}
     result = requests.post(post_url, json=data).json()['data']['activeDailyCodingChallengeQuestion']
-    questionDate = result['date']
-    questionID = result['question']['questionId']
+    question_date = result['date']
+    question_id = result['question']['questionFrontendId']
     title = result['question']['title']
-    questionLink = leetcode_url + result['link']
-    acRate = result['question']['acRate']
+    question_link = leetcode_url + result['link']
+    ac_rate = result['question']['acRate']
     difficulty = result['question']['difficulty']
     likes = result['question']['likes']
     dislikes = result['question']['dislikes']
     content = result['question']['content']
-    paidOnly = result['question']['paidOnly']
-    hasSolution = result['question']['hasSolution']
-    topicTags = result['question']['topicTags']
-    similarQuestions = json.loads(result['question']['similarQuestions'])
+    paid_only = result['question']['paidOnly']
+    has_solution = result['question']['hasSolution']
+    solution_link = question_link + "solution/"
+    topic_tags = result['question']['topicTags']
+    similar_questions = json.loads(result['question']['similarQuestions'])
 
     embed = discord.Embed()
 
-    embed.title = f"🏆 Leetcode Daily Coding Challenge ({questionDate})"
+    embed.title = f"🏆 Leetcode Daily Coding Challenge ({question_date})"
 
     # problem field
-    problemField = {}
-    if paidOnly:
-        problemField['name'] = f"Problem {questionID} 💰"
+    problem_field = {}
+    if paid_only:
+        problem_field['name'] = f"Problem {question_id} 💰"
     else:
-        problemField['name'] = f"Problem {questionID}"
-    problemField['value'] = f"[{title}]({questionLink}) ({difficulty})"
-    if hasSolution:
-        problemField['value'] += f" [Solution]({questionLink})"
-    problemField['inline'] = False
-    embed.add_field(name=problemField['name'], value=problemField['value'], inline=problemField['inline'])
+        problem_field['name'] = f"Problem {question_id}"
+    problem_field['value'] = f"[{title}]({question_link}) ({difficulty})"
+    if has_solution:
+        problem_field['value'] += f" [Solution]({solution_link})"
+    problem_field['inline'] = False
+    embed.add_field(
+        name=problem_field['name'],
+        value=problem_field['value'],
+        inline=problem_field['inline']
+    )
 
     # acceptance rate field
-    acceptanceField = {'name': f"Acceptance", 'value': f"{round(acRate, 2)}%", 'inline': True}
-    embed.add_field(name=acceptanceField['name'], value=acceptanceField['value'], inline=acceptanceField['inline'])
+    acceptance_field = {
+        'name': f"Acceptance",
+        'value': f"{round(ac_rate, 2)}%",
+        'inline': True
+    }
+    embed.add_field(
+        name=acceptance_field['name'],
+        value=acceptance_field['value'],
+        inline=acceptance_field['inline']
+    )
 
     # like field
-    likeField = {'name': f"👍 Like", 'value': likes, 'inline': True}
-    embed.add_field(name=likeField['name'], value=likeField['value'], inline=likeField['inline'])
+    like_field = {
+        'name': f"👍 Like",
+        'value': likes,
+        'inline': True
+    }
+    embed.add_field(
+        name=like_field['name'],
+        value=like_field['value'],
+        inline=like_field['inline']
+    )
 
     # dislike field
-    dislikeField = {'name': f"👎 Dislike", 'value': dislikes, 'inline': True}
-    embed.add_field(name=dislikeField['name'], value=dislikeField['value'], inline=dislikeField['inline'])
+    dislike_field = {
+        'name': f"👎 Dislike",
+        'value': dislikes,
+        'inline': True
+    }
+    embed.add_field(
+        name=dislike_field['name'],
+        value=dislike_field['value'],
+        inline=dislike_field['inline']
+    )
 
     # related topic field
-    topicFieldValue = ""
-    for i in range(len(topicTags)):
-        topicFieldValue += f"[{topicTags[i]['name']}]({leetcode_url}/tag/{topicTags[i]['slug']}/)"
-        if i != len(topicTags) - 1:
-            topicFieldValue += ', '
-    embed.add_field(name="Related topics", value=topicFieldValue, inline=False)
+    topic_field_value = ""
+    for i in range(len(topic_tags)):
+        value = f"[{topic_tags[i]['name']}]({leetcode_url}/tag/{topic_tags[i]['slug']}/)"
+        if len(topic_field_value) + len(value) > EMBED_FIELD_VALUE_LIMIT:
+            break
+        topic_field_value += value
+        if i != len(topic_tags) - 1:
+            topic_field_value += ', '
+    embed.add_field(
+        name="Related topics",
+        value=topic_field_value,
+        inline=False
+    )
 
     # similar questions field
-    similarFieldValue = ""
-    for i in range(len(similarQuestions)):
-        similarFieldValue += f"[{similarQuestions[i]['title']}]({leetcode_url}/problems/{similarQuestions[i]['titleSlug']}/) ({similarQuestions[i]['difficulty']})"
-        if i != len(similarQuestions) - 1:
-            similarFieldValue += ', '
-    if len(similarQuestions) > 0:
-        embed.add_field(name='Similar questions', value=similarFieldValue, inline=False)
+    similar_field_value = ""
+    for i in range(len(similar_questions)):
+        value = f"[{similar_questions[i]['title']}]({leetcode_url}/problems/{similar_questions[i]['titleSlug']}/) ({similar_questions[i]['difficulty']})"
+        if len(similar_field_value) + len(value) > EMBED_FIELD_VALUE_LIMIT:
+            break
+        similar_field_value += value
+        if i != len(similar_questions) - 1:
+            similar_field_value += '\n'
+    if len(similar_questions) > 0:
+        embed.add_field(
+            name='Similar questions',
+            value=similar_field_value,
+            inline=False
+        )
+
+    return embed
+
+def get_question_by_id(question_id: int) -> discord.Embed():
+    global leetcode_url, EMBED_FIELD_VALUE_LIMIT
+    get_url = leetcode_url + "/api/problems/all/"
+    result = requests.get(get_url).json()
+    problems = list(map(lambda x: {"frontend_question_id": x['stat']['frontend_question_id'], "title_slug": x['stat']['question__title_slug']}, sorted(result['stat_status_pairs'], key=lambda x: x['stat']['frontend_question_id'])))
+    if question_id > len(problems):
+        return None
+    title_slug = problems[question_id - 1]['title_slug']
+    post_url = leetcode_url + "/graphql"
+    data = {
+        "operationName": "questionData",
+        "variables": {
+            "titleSlug": title_slug
+        },
+        "query":
+        "query questionData($titleSlug: String!){\
+            question(titleSlug: $titleSlug) {\
+                questionId\
+                questionFrontendId\
+                title\
+                titleSlug\
+                acRate\
+                difficulty\
+                freqBar\
+                likes\
+                dislikes\
+                content\
+                similarQuestions\
+                isFavor\
+                paidOnly: isPaidOnly\
+                status\
+                hasVideoSolution\
+                hasSolution\
+                topicTags {name id slug}\
+            }\
+        }"
+    }
+    result = requests.post(post_url, json=data).json()['data']['question']
+    question_id = result['questionFrontendId']
+    title = result['title']
+    question_link = leetcode_url + "/problems/" + result['titleSlug'] + "/"
+    ac_rate = result['acRate']
+    difficulty = result['difficulty']
+    likes = result['likes']
+    dislikes = result['dislikes']
+    content = result['content']
+    paid_only = result['paidOnly']
+    has_solution = result['hasSolution']
+    solution_link = question_link + "solution/"
+    topics_tags = result['topicTags']
+    similar_questions = json.loads(result['similarQuestions'])
+
+    embed = discord.Embed()
+
+    # embed title & description
+    if paid_only:
+        embed.title = f"Leetcode Problem {question_id} 💰"
+    else:
+        embed.title = f"Leetcode Problem {question_id}"
+    embed.description = f"[{title}]({question_link}) ({difficulty})"
+    if has_solution:
+        embed.description += f" [Solution]({solution_link})"
+
+    # acceptance rate field
+    acceptance_field = {'name': f"Acceptance", 'value': f"{round(ac_rate, 2)}%", 'inline': True}
+    embed.add_field(
+        name=acceptance_field['name'],
+        value=acceptance_field['value'],
+        inline=acceptance_field['inline']
+    )
+
+    # like field
+    like_field = {
+        'name': f"👍 Like",
+        'value': likes,
+        'inline': True
+    }
+    embed.add_field(
+        name=like_field['name'],
+        value=like_field['value'],
+        inline=like_field['inline']
+    )
+
+    # dislike field
+    dislike_field = {
+        'name': f"👎 Dislike",
+        'value': dislikes,
+        'inline': True
+    }
+    embed.add_field(
+        name=dislike_field['name'],
+        value=dislike_field['value'],
+        inline=dislike_field['inline']
+    )
+
+    # related topic field
+    topic_field_value = ""
+    for i in range(len(topics_tags)):
+        value = f"[{topics_tags[i]['name']}]({leetcode_url}/tag/{topics_tags[i]['slug']}/)"
+        if len(topic_field_value) + len(value) > EMBED_FIELD_VALUE_LIMIT:
+            break
+        topic_field_value += value
+        if i != len(topics_tags) - 1:
+            topic_field_value += ', '
+    embed.add_field(
+        name="Related topics",
+        value=topic_field_value,
+        inline=False
+    )
+
+    # similar questions field
+    similar_field_value = ""
+    for i in range(len(similar_questions)):
+        value = f"[{similar_questions[i]['title']}]({leetcode_url}/problems/{similar_questions[i]['titleSlug']}/) ({similar_questions[i]['difficulty']})"
+        if len(similar_field_value) + len(value) > EMBED_FIELD_VALUE_LIMIT:
+            break
+        similar_field_value += value
+        if i != len(similar_questions) - 1:
+            similar_field_value += '\n'
+    if len(similar_questions) > 0:
+        embed.add_field(
+            name='Similar questions',
+            value=similar_field_value,
+            inline=False
+        )
 
     return embed
