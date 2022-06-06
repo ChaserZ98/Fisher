@@ -350,7 +350,7 @@ async def show_leaderboard(guild: discord.Guild):
 
 # $leetcode start
 async def add_leetcode_schedule(scheduler: AsyncIOScheduler, guild: discord.Guild):
-    global start_time, remind_time, end_time
+    global start_time, remind_time, end_time, timezone
     leetcode_channel = get_leetcode_channel(guild)
     scheduler.add_job(
         leetcode_start,
@@ -369,7 +369,8 @@ async def add_leetcode_schedule(scheduler: AsyncIOScheduler, guild: discord.Guil
         CronTrigger(
             hour=remind_time['hour'],
             minute=remind_time['minute'],
-            second=remind_time['second']
+            second=remind_time['second'],
+            timezone=timezone
         ),
         args=(guild,),
         misfire_grace_time=None,
