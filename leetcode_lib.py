@@ -5,6 +5,7 @@ import json
 import pickle
 
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import discord
 
 EMBED_FIELD_VALUE_LIMIT = 1024
@@ -25,6 +26,11 @@ leetcode_channel_file_name = "leetcode_channel.txt"
 timezone="America/New_York"
 start_time = {
     'hour': "08",
+    'minute': "00",
+    'second': "00"
+}
+remind_time = {
+    'hour': "23",
     'minute': "00",
     'second': "00"
 }
@@ -193,7 +199,7 @@ async def set_role(guild: discord.Guild, name: str, color: discord.Color=discord
         reason=reason
     )
 
-async def initialize(guild: discord.Guild, channel: discord.TextChannel, scheduler):
+async def initialize(guild: discord.Guild, channel: discord.TextChannel, scheduler: AsyncIOScheduler):
 
     # create server data directory
     global data_directory, leetcode_data_directory
@@ -228,7 +234,7 @@ async def initialize(guild: discord.Guild, channel: discord.TextChannel, schedul
 
     await channel.send("Initialization complete!")
 
-async def resume(guild: discord.Guild, channel: discord.TextChannel, scheduler):
+async def resume(guild: discord.Guild, channel: discord.TextChannel, scheduler: AsyncIOScheduler):
     # syncronize daily report member data
     synchronize_daily_report_member(guild)
 
@@ -245,7 +251,7 @@ async def resume(guild: discord.Guild, channel: discord.TextChannel, scheduler):
 
     await channel.send("Resume complete!")
 
-async def clean(guild: discord.Guild, scheduler):
+async def clean(guild: discord.Guild, scheduler: AsyncIOScheduler):
     
     # delete leetcode role
     leetcode_role = get_leetcode_role(guild)
@@ -343,7 +349,8 @@ async def show_leaderboard(guild: discord.Guild):
     await leetcode_channel.send(message)
 
 # $leetcode start
-async def add_leetcode_schedule(scheduler, guild: discord.Guild):
+async def add_leetcode_schedule(scheduler: AsyncIOScheduler, guild: discord.Guild):
+    global start_time, remind_time, end_time
     leetcode_channel = get_leetcode_channel(guild)
     scheduler.add_job(
         leetcode_start,
@@ -356,6 +363,17 @@ async def add_leetcode_schedule(scheduler, guild: discord.Guild):
         args=(guild,),
         misfire_grace_time=None,
         id=f"leetcode start {guild.id}"
+    )
+    scheduler.add_job(
+        leetcode_remind,
+        CronTrigger(
+            hour=remind_time['hour'],
+            minute=remind_time['minute'],
+            second=remind_time['second']
+        ),
+        args=(guild,),
+        misfire_grace_time=None,
+        id=f"leetcode remind {guild.id}"
     )
     scheduler.add_job(
         leetcode_end,
@@ -373,14 +391,17 @@ async def add_leetcode_schedule(scheduler, guild: discord.Guild):
     await leetcode_channel.send(
         f"Leetcode daily coding challenge job all set.\n" +
         f"Daily start time: {start_time['hour']}:{start_time['minute']}:{start_time['second']}\n" +
+        f"Daily remind time: {remind_time['hour']}:{remind_time['minute']}:{remind_time['second']}\n" + 
         f"Daily end time: {end_time['hour']}:{end_time['minute']}:{end_time['second']}"
     )
 
 # $leetcode stop
-async def remove_leetcode_schedule(scheduler, guild: discord.Guild):
+async def remove_leetcode_schedule(scheduler: AsyncIOScheduler, guild: discord.Guild):
     leetcode_channel = get_leetcode_channel(guild)
     if scheduler.get_job(f"leetcode start {guild.id}"):
         scheduler.remove_job(f"leetcode start {guild.id}")
+    if scheduler.get_job(f"leetcode remind {guild.id}"):
+        scheduler.remove_job(f"leetcode remind {guild.id}")
     if scheduler.get_job(f"leetcode end {guild.id}"):
         scheduler.remove_job(f"leetcode end {guild.id}")
     await leetcode_channel.send("Leetcode daily coding challenge job is removed.")
@@ -396,6 +417,21 @@ async def leetcode_start(guild: discord.Guild):
     embed = get_daily_coding_challenge()
     await leetcode_channel.send(embed=embed)
     await leetcode_channel.send(f"The new daily coding challenge has released! {leetcode_role.mention}")
+
+async def leetcode_remind(guild: discord.Guild):
+    leetcode_channel = get_leetcode_channel(guild)
+    daily_report = get_daily_report(guild)
+    unfinishedCount = 0
+    unfinishedUser = ""
+    for user_id, value in daily_report.items():
+        user = guild.get_member(user_id)
+        if value == 0:
+            unfinishedCount += 1
+            unfinishedUser += user.mention
+    content = "Today's leetcode daily coding challenge will be end soon. You still have some time to complete it."
+    if unfinishedCount > 0:
+        content += "\n" + unfinishedUser
+    await leetcode_channel.send(content)
 
 async def leetcode_end(guild: discord.Guild):
     leetcode_channel = get_leetcode_channel(guild)
