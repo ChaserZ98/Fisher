@@ -249,3 +249,4 @@ fabric.properties
 bot.json
 data
 *.err
+*.sh
