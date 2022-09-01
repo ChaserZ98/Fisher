@@ -23,6 +23,8 @@ if platform.system() == 'Windows':
 description = "This is a personal bot made by ChaserZ"
 intents = discord.Intents.default()
 intents.members = True
+intents.message_content = True
+
 bot = commands.Bot(
     command_prefix='$',
     description=description,
@@ -160,6 +162,7 @@ async def leetcode(ctx: discord.ext.commands.Context, option=None, *, args: str=
 
 @bot.event
 async def on_message(message: discord.Message):
+
     if message.author == bot.user or message.author.bot:
         return
     
