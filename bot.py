@@ -4,6 +4,7 @@ import platform
 import asyncio
 import random
 import time
+import re
 
 from traceback import print_exc
 import discord
@@ -166,7 +167,7 @@ async def on_message(message: discord.Message):
     if message.author == bot.user or message.author.bot:
         return
     
-    if message.content.startswith("https://leetcode.com/submissions/detail") and message.guild.id in lc.guild_status and lc.guild_status[message.guild.id]:
+    if re.search("^https://leetcode.com/problems/[a-z0-9\-]+/submissions/[0-9]+/?", message.content) and message.guild.id in lc.guild_status and lc.guild_status[message.guild.id]:
         leetcode_role = lc.get_leetcode_role(message.guild)
         daily_report = lc.get_daily_report(message.guild)
         history_score = lc.get_history_score(message.guild)
@@ -177,8 +178,6 @@ async def on_message(message: discord.Message):
 
             history_score[message.author.id] += 1
             lc.update_history_score(message.guild, history_score)
-            
-            
 
     await bot.process_commands(message)
 
