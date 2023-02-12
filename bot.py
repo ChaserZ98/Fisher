@@ -85,10 +85,9 @@ async def status_task() -> None:
 async def quit(ctx, *, args=None) -> None:
     if args:
         return
-    print("Shutting down bot...", end='')
+    print("Shutting down bot...")
     await ctx.send("The bot has been shut down. Bye!")
     await bot.close()
-    print("Done!")
 
 # leetcode command
 @bot.command(
@@ -188,3 +187,5 @@ try:
     bot.run(TOKEN)
 except:
     print_exc()
+
+print("The bot has been shut down")
