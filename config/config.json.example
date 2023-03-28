@@ -1,0 +1,23 @@
+{
+    "dev": {
+        "prefix": "$",
+        "description": "some description",
+        "application_id": 0,
+        "permissions": 0,
+        "sync_commands_globally": false,
+        "dev_channel_id": 0,
+        "owners": [
+            0
+        ]
+    },
+    "prod": {
+        "prefix": "$",
+        "description": "some description",
+        "application_id": 0,
+        "permissions": 0,
+        "sync_commands_globally": false,
+        "owners": [
+            0
+        ]
+    }
+}
