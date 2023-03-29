@@ -10,7 +10,7 @@ class SerializationType(Enum):
 class IODict(dict):
     def __init__(self, file_path: str):
         super().__init__()
-        self.file_path = filepath
+        self.file_path = file_path
     
     @property
     def file_path(self):

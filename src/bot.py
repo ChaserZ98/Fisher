@@ -67,4 +67,4 @@ try:
     bot.start_time = time.perf_counter()
     bot.run(os.getenv("BOT_TOKEN"))
 except Exception as e:
-    bot.logger.error(f'Bot log in failed: {e}')
+    bot.logger.exception(f'Bot log in failed: {e}')

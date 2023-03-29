@@ -1,3 +1,17 @@
+#!/usr/bin/env python
+# -*-coding:utf-8 -*-
+'''
+@File      :    Fisher.py
+@Time      :    2023/03/29
+@Author    :    Feiyu Zheng
+@Version   :    1.0
+@Contact   :    feiyuzheng98@gmail.com
+@License   :    Copyright (c) 2023-present Feiyu Zheng. All rights reserved.
+                This work is licensed under the terms of the MIT license.
+                For a copy, see <https://opensource.org/licenses/MIT>.
+@Desc      :    None
+'''
+
 import logging
 import os
 import platform
@@ -7,6 +21,9 @@ import time
 import discord
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
+
+from lib.Translator import FisherTranslator
+from utils.discord_utils import is_owner
 
 class Fisher(commands.Bot):
     def __init__(
@@ -43,8 +60,8 @@ class Fisher(commands.Bot):
     @start_time.setter
     def start_time(self, val: float):
         self._start_time = val
-    
-    async def on_ready(self):
+
+    async def setup_hook(self):
         self.logger.info(f"Connected to Discord API in {round(time.perf_counter() - self.start_time, 2)}s")
         self.logger.info(" Bot Configuration ".center(60, '-'))
         self.logger.info(f"Logged in as {self.user.name}")
@@ -53,19 +70,26 @@ class Fisher(commands.Bot):
         self.logger.info(f"Running on: {platform.system()} {platform.release()} ({os.name})")
         self.logger.info("".center(60, '-'))
 
-        main_channel = self.get_channel(self.config['dev_channel_id'])
-        await main_channel.send(f"{self.user.name} has connected to Discord!")
+        if self.config['use_translator']:
+            await self.tree.set_translator(FisherTranslator())
+            self.logger.info("Command tree translator set")
 
-        self.status_task.start()
-        self.logger.info("Bot status loop started")
-
-        self.add_core_commands()
+        await self.load_extension('lib.CoreCog')
         self.logger.info("Bot core commands loaded")
 
         if self.config["sync_commands_globally"]:
             self.logger.info("Syncing commands globally...")
             await self.tree.sync()
             self.logger.info("Successfully Sync commands globally")
+    
+    async def on_ready(self):
+        self.logger.info(f"Bot {self.user.name} is ready to use")
+        main_channel = self.get_channel(self.config['dev_channel_id'])
+        await main_channel.send(f"{self.user.name} has connected to Discord!")
+        
+        self.status_task.start()
+        self.logger.info("Bot status loop started")
+        
     
     @tasks.loop(minutes=30.0)
     async def status_task(self):
@@ -82,15 +106,9 @@ class Fisher(commands.Bot):
             self.logger.info(f"Executed {executed_command} command by {ctx.author} (ID: {ctx.author.id}) in DMs")
     
     async def on_command_error(self, ctx: Context, exception) -> None:
-        print(2, ctx.interaction, exception)
+        self.logger.warning(f"User: {ctx.author} (ID: {ctx.author.id}) Guild: {ctx.guild.name} (ID: {ctx.guild.id}) Command: {ctx.message.content} Exception: {exception}")
         # if isinstance(exception, commands.CommandOnCooldown):
         #     minutes, seconds = divmod(exception.retry_after, 60)
         #     hours, minutes = divmod(minutes, 60)
         #     hours = hours % 24
-    
-    def add_core_commands(self):
-        @self.hybrid_command(name='hello', description='hello world')
-        async def hello(ctx: Context):
-            print(ctx.interaction)
-            print(ctx.message.content)
 
