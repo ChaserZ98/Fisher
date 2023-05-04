@@ -68,3 +68,5 @@ try:
     bot.run(os.getenv("BOT_TOKEN"))
 except Exception as e:
     bot.logger.exception(f'Bot log in failed: {e}')
+
+bot.logger.info("Bot exited")
