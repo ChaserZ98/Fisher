@@ -24,7 +24,20 @@ class CoreCog(commands.Cog, name='core'):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
-        self.loadable_cog_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'cogs'))
+        
+        self.loadable_cog_path = os.path.relpath(
+            os.path.realpath(
+                os.path.join(os.path.dirname(__file__), '..', 'cogs')
+            ),
+            os.path.realpath(
+                os.path.join(os.path.dirname(__file__), '..')
+            )
+        )
+        self.loadable_cogs = {
+            **dict.fromkeys(['lc', 'leetcode'], 'leetcode.LeetcodeCog'),
+            **dict.fromkeys(['test'], 'test.TestCog')
+        }
+        
         self.add_command()
 
         self.localized_group_name = {
@@ -34,6 +47,10 @@ class CoreCog(commands.Cog, name='core'):
             }
         }
         self.localized_command_name = {
+            'exit': {
+                'en-US': 'exit',
+                'zh-CN': '退出'
+            },
             'guild': {
                 'en-US': 'guild',
                 'zh-CN': '单服'
@@ -41,13 +58,57 @@ class CoreCog(commands.Cog, name='core'):
             'globally': {
                 'en-US': 'globally',
                 'zh-CN': '全服'
+            },
+            'enable': {
+                'en-US': 'enable',
+                'zh-CN': '启用'
+            },
+            'disable': {
+                'en-US': 'disable',
+                'zh-CN': '禁用'
             }
         }
     
     def add_command(self):
-        @self.bot.hybrid_group(name=locale_str('sync'), description='Syncronize the slash commands')
+        """Add commands to the bot
+
+        Raises:
+            commands.CommandError: error when processing commands
+        """
+
+        @self.bot.hybrid_command(
+                name=locale_str('exit'),
+                description='Exit the bot'
+        )
+        @is_owner(self.bot.config['owners'])
+        async def exit(ctx: commands.Context) -> None:
+            """Exit the bot
+
+            Args:
+                ctx (commands.Context): context of the command
+            """
+            if ctx.guild is not None:
+                self.bot.logger.info(f"Executed exit command in {ctx.guild.name} (ID: {ctx.guild.id}) by {ctx.author} (ID: {ctx.author.id})")
+            else:
+                self.bot.logger.info(f"Executed exit command by {ctx.author} (ID: {ctx.author.id}) in DMs")
+            
+            await ctx.send('Bye')
+            await self.bot.close()
+        
+        @self.bot.hybrid_group(
+                name=locale_str('sync'),
+                description='Syncronize the slash commands'
+        )
         @is_owner(self.bot.config['owners'])
         async def sync(ctx: commands.Context) -> None:
+            """Syncronize the slash commands
+
+            Args:
+                ctx (commands.Context): context of the command
+
+            Raises:
+                commands.CommandError: invalid sync subcommand called
+            """
             if ctx.invoked_subcommand is None:
                 tokens = ctx.message.content.split(" ")
                 if len(tokens) > 1:
@@ -59,8 +120,21 @@ class CoreCog(commands.Cog, name='core'):
                     raise commands.CommandError(f"Invalid subcommand: {tokens[1]}")
                 await sync_guild(ctx, guild_id=ctx.guild.id)
         
-        @sync.command(name=locale_str('guild'), description='Syncronize slash commands for a specific server, default as the current server')
-        async def sync_guild(ctx: commands.Context, guild_id: int=commands.parameter(default=lambda ctx: ctx.guild.id)) -> None:
+        @sync.command(
+                name=locale_str('guild'),
+                description='Syncronize slash commands for a specific server, default as the current server'
+        )
+        @is_owner(self.bot.config['owners'])
+        async def sync_guild(
+            ctx: commands.Context,
+            guild_id: int=commands.parameter(default=lambda ctx: ctx.guild.id)
+        ) -> None:
+            """Syncronize the slash commands for a specific server
+
+            Args:
+                ctx (commands.Context): context of the command
+                guild_id (int, optional): ID of the server. Defaults to commands.parameter(default=lambda ctx: ctx.guild.id).
+            """
             guild = self.bot.get_guild(guild_id)
             self.bot.tree.copy_global_to(guild=guild)
             await self.bot.tree.sync(guild=guild)
@@ -70,43 +144,120 @@ class CoreCog(commands.Cog, name='core'):
             )
             await ctx.send(embed=embed, ephemeral=True)
         
-        @sync.command(name=locale_str('globally'), description="Syncronize slash commands across all servers")
+        @sync.command(
+                name=locale_str('globally'),
+                description="Synchronize slash commands across all servers"
+        )
+        @is_owner(self.bot.config['owners'])
         async def sync_globally(ctx: commands.Context):
+            """Synchronize slash commands across all servers
+
+            Args:
+                ctx (commands.Context): context of the command
+            """
             await self.bot.tree.sync()
             embed = discord.Embed(
                 description="Slash commands have been globally synchronized.",
                 color=0x9C84EF
             )
             await ctx.send(embed=embed, ephemeral=True)
+
+        @self.bot.hybrid_command(
+                name=locale_str('enable'),
+                description='Enable a cog'
+        )
+        @discord.app_commands.describe(cog_name="additional cog you want to enable")
+        @is_owner(self.bot.config['owners'])
+        async def enable_cog(ctx : commands.Context, *, cog_name: str):
+            """Enable a cog
+
+            Args:
+                ctx (commands.Context): context of the command
+                cog_name (str): name of the cog
+
+            Raises:
+                commands.CommandError: error when enabling the cog
+            """
+            cog_name = cog_name.lower()
+            if cog_name in self.loadable_cogs:
+                try:
+                    cog = self.loadable_cogs[cog_name]
+                    cog_dir = self.loadable_cog_path.replace('/', '.')
+                    await self.bot.load_extension(
+                        name=f".{cog}",
+                        package=cog_dir
+                    )
+                    
+                    embed = discord.Embed(
+                        description=f"Cog {cog_name} has been enabled.",
+                        color=0x9C84EF
+                    )
+
+                    # update the slash commands (might trigger rate limit)
+                    # guild = ctx.guild
+                    # self.bot.tree.copy_global_to(guild=guild)
+                    # await self.bot.tree.sync(guild=guild)
+
+                except Exception as e:
+                    embed = discord.Embed(
+                        description=f"Cog {cog_name} cannot be enabled: {e}",
+                        color=0x9C84EF
+                    )
+                    await ctx.send(embed=embed, ephemeral=True)
+                    
+                    raise commands.CommandError(f"Cog {cog_name} under package {cog_dir} cannot be enabled: {e}")
+            else:
+                embed = discord.Embed(
+                    description=f"Cog {cog_name} does not exist.",
+                    color=0x9C84EF
+                )
+            await ctx.send(embed=embed, ephemeral=True)
         
-        # @self.bot.command(name='lang')
-        # @discord.app_commands.choices(
-        #     lang=[
-        #         discord.app_commands.Choice(name='en-US', value=1),
-        #         discord.app_commands.Choice(name='zh-CN', value=2)
-        #     ]
-        # )
-        # async def lang(ctx: commands.Context):
+        @self.bot.hybrid_command(
+                name=locale_str('disable'),
+                description='Disable a cog'
+        )
+        @discord.app_commands.describe(cog_name="additional cog you want to disable")
+        @is_owner(self.bot.config['owners'])
+        async def disable_cog(ctx : commands.Context, *, cog_name: str):
+            """Disable a cog
 
-        
-        @self.bot.command(name='test')
-        async def test(ctx: commands.Context) -> None:
-            ctx.author
+            Args:
+                ctx (commands.Context): context of the command
+                cog_name (str): name of the cog
 
-        # @self.bot.hybrid_command(name='enable')
-        # @discord.app_commands.describe(cog_name="additional cog you want to enable")
-        # @is_owner(self.bot.config['owners'])
-        # async def enable_cog(self, ctx, *, cog_name: str):
-        #     cog_name = cog_name.lower()
-
-    
+            Raises:
+                commands.CommandError: error when disabling the cog
+            """
+            cog_name = cog_name.lower()
+            if cog_name in self.loadable_cogs:
+                try:
+                    cog = self.loadable_cogs[cog_name]
+                    cog_dir = self.loadable_cog_path.replace('/', '.')
+                    await self.bot.unload_extension(
+                        name=f".{cog}",
+                        package=cog_dir
+                    )
+                    embed = discord.Embed(
+                        description=f"Cog {cog_name} has been disabled.",
+                        color=0x9C84EF
+                    )
+                except Exception as e:
+                    embed = discord.Embed(
+                        description=f"Cog {cog_name} cannot be disabled: {e}",
+                        color=0x9C84EF
+                    )
+                    await ctx.send(embed=embed, ephemeral=True)
+                    raise commands.CommandError(f"Cog {cog_name} under package {cog_dir} cannot be disabled: {e}")
+            else:
+                embed = discord.Embed(
+                    description=f"Cog {cog_name} does not exist.",
+                    color=0x9C84EF
+                )
+            await ctx.send(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot):
     corecog = CoreCog(bot)
     await bot.add_cog(corecog)
     bot.tree.translator.update_corpus(TranslationContextLocation.group_name, corecog.localized_group_name)
     bot.tree.translator.update_corpus(TranslationContextLocation.command_name, corecog.localized_command_name)
-
-# if __name__ == '__main__':
-#     print(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'cogs')))
-#     print(os.listdir(os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'cogs'))))
