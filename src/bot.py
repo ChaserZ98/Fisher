@@ -2,11 +2,11 @@
 # -*-coding:utf-8 -*-
 '''
 @File      :    bot.py
-@Time      :    2023/03/27 21:31:59
+@Time      :    2023/03/27
 @Author    :    Feiyu Zheng
 @Version   :    1.0
 @Contact   :    feiyuzheng98@gmail.com
-@License   :    Copyright (c) 2023 Feiyu Zheng. All rights reserved.
+@License   :    Copyright (c) 2023-present Feiyu Zheng. All rights reserved.
                 This work is licensed under the terms of the MIT license.
                 For a copy, see <https://opensource.org/licenses/MIT>.
 @Desc      :    None
