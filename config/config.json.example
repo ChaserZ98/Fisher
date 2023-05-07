@@ -5,7 +5,11 @@
         "application_id": 0,
         "permissions": 0,
         "sync_commands_globally": false,
+        "use_translator": true,
         "dev_channel_id": 0,
+        "extensions": {
+            "cogs": []
+        },
         "owners": [
             0
         ]
