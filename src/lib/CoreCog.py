@@ -12,8 +12,6 @@
 @Desc      :    None
 '''
 
-import os
-
 import discord
 from discord.app_commands import locale_str, TranslationContextLocation
 from discord.ext import commands
@@ -25,14 +23,7 @@ class CoreCog(commands.Cog, name='core'):
         super().__init__()
         self.bot = bot
         
-        self.loadable_cog_path = os.path.relpath(
-            os.path.realpath(
-                os.path.join(os.path.dirname(__file__), '..', 'cogs')
-            ),
-            os.path.realpath(
-                os.path.join(os.path.dirname(__file__), '..')
-            )
-        )
+        self.loadable_cogs_dir = 'cogs'
         self.loadable_cogs = {
             **dict.fromkeys(['lc', 'leetcode'], 'leetcode.LeetcodeCog'),
             **dict.fromkeys(['test'], 'test.TestCog')
@@ -178,40 +169,45 @@ class CoreCog(commands.Cog, name='core'):
             Raises:
                 commands.CommandError: error when enabling the cog
             """
+            message = ""
             cog_name = cog_name.lower()
             if cog_name in self.loadable_cogs:
+                # valid cog name
+                cog_dir = self.loadable_cogs_dir
+                cog_file_path = self.loadable_cogs[cog_name]  # get the python file name of the cog
+                cog_name = cog_file_path.split(".")[0]  # get the complete cog name
+                
                 try:
-                    cog = self.loadable_cogs[cog_name]
-                    cog_dir = self.loadable_cog_path.replace('/', '.')
-                    await self.bot.load_extension(
-                        name=f".{cog}",
-                        package=cog_dir
-                    )
-                    
-                    embed = discord.Embed(
-                        description=f"Cog {cog_name} has been enabled.",
-                        color=0x9C84EF
-                    )
+                    await self.bot.load_extension(name=f"{cog_dir}.{cog_file_path}") # load the cog
 
-                    # update the slash commands (might trigger rate limit)
+                    # TODO
+                    # update the slash commands
+                    # this might trigger the rate limit so it is not implemented yet until I find a better way to do this
                     # guild = ctx.guild
                     # self.bot.tree.copy_global_to(guild=guild)
                     # await self.bot.tree.sync(guild=guild)
-
+                
+                except commands.ExtensionAlreadyLoaded as e:
+                    message = f"Cog '{cog_name}' cannot be enabled: Cog '{cog_name}' is already enabled."
+                    raise e
+                except commands.ExtensionNotFound as e:
+                    message = f"Cog '{cog_name}' cannot be enabled: Cog '{cog_name}' does not exist."
+                    raise e
                 except Exception as e:
-                    embed = discord.Embed(
-                        description=f"Cog {cog_name} cannot be enabled: {e}",
-                        color=0x9C84EF
-                    )
+                    # error when enabling the cog
+                    message = f"Cog '{cog_name}' cannot be enabled: {e}"
+                    raise e
+                else:
+                    message = f"Cog '{cog_name}' has been enabled."
+                finally:
+                    embed = discord.Embed(description=message,color=0x9C84EF)
                     await ctx.send(embed=embed, ephemeral=True)
-                    
-                    raise commands.CommandError(f"Cog {cog_name} under package {cog_dir} cannot be enabled: {e}")
             else:
-                embed = discord.Embed(
-                    description=f"Cog {cog_name} does not exist.",
-                    color=0x9C84EF
-                )
-            await ctx.send(embed=embed, ephemeral=True)
+                # unknown cog name
+                message = f"Cog with name or alias {cog_name} does not exist."
+                embed = discord.Embed(description=message,color=0x9C84EF)
+                await ctx.send(embed=embed, ephemeral=True)
+                raise commands.CommandError(f"Cog '{cog_name}' does not exist")
         
         @self.bot.hybrid_command(
                 name=locale_str('disable'),
@@ -229,32 +225,31 @@ class CoreCog(commands.Cog, name='core'):
             Raises:
                 commands.CommandError: error when disabling the cog
             """
+            message = ""
             cog_name = cog_name.lower()
             if cog_name in self.loadable_cogs:
+                cog_dir = self.loadable_cogs_dir
+                cog_file_path = self.loadable_cogs[cog_name]
+                cog_name = cog_file_path.split(".")[0]
+
                 try:
-                    cog = self.loadable_cogs[cog_name]
-                    cog_dir = self.loadable_cog_path.replace('/', '.')
-                    await self.bot.unload_extension(
-                        name=f".{cog}",
-                        package=cog_dir
-                    )
-                    embed = discord.Embed(
-                        description=f"Cog {cog_name} has been disabled.",
-                        color=0x9C84EF
-                    )
+                    await self.bot.unload_extension(name=f"{cog_dir}.{cog_file_path}")
+                except commands.ExtensionNotLoaded:
+                    message = f"Cog '{cog_name}' cannot be disabled: Cog '{cog_name}' is not loaded."
+                    raise e
                 except Exception as e:
-                    embed = discord.Embed(
-                        description=f"Cog {cog_name} cannot be disabled: {e}",
-                        color=0x9C84EF
-                    )
+                    message = f"Cog '{cog_name}' cannot be disabled: {e}"
+                    raise e
+                else:
+                    message = f"Cog '{cog_name}' has been disabled."
+                finally:
+                    embed = discord.Embed(description=message,color=0x9C84EF)
                     await ctx.send(embed=embed, ephemeral=True)
-                    raise commands.CommandError(f"Cog {cog_name} under package {cog_dir} cannot be disabled: {e}")
             else:
-                embed = discord.Embed(
-                    description=f"Cog {cog_name} does not exist.",
-                    color=0x9C84EF
-                )
-            await ctx.send(embed=embed, ephemeral=True)
+                message = f"Cog '{cog_name}' does not exist."
+                embed = discord.Embed(description=message,color=0x9C84EF)
+                await ctx.send(embed=embed, ephemeral=True)
+                raise commands.CommandError(f"Cog '{cog_name}' does not exist")
 
 async def setup(bot: commands.Bot):
     """Load the cog
