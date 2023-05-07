@@ -57,6 +57,10 @@ class CoreCog(commands.Cog, name='core'):
             'disable': {
                 'en-US': 'disable',
                 'zh-CN': '禁用'
+            },
+            'reload': {
+                'en-US': 'reload',
+                'zh-CN': '重启'
             }
         }
     
@@ -256,6 +260,39 @@ class CoreCog(commands.Cog, name='core'):
             else:
                 message = f"Cog '{cog_name}' does not exist."
                 embed = discord.Embed(description=message,color=0x9C84EF)
+                await ctx.send(embed=embed, ephemeral=True)
+                raise commands.CommandError(f"Cog '{cog_name}' does not exist")
+        
+        @self.bot.hybrid_command(
+                name=locale_str('reload'),
+                description='Reload a cog'
+        )
+        @discord.app_commands.describe(cog_name="additional cog you want to reload")
+        @is_owner(self.bot.config['owners'])
+        async def reload_cog(ctx : commands.Context, *, cog_name: str):
+            message = ""
+            cog_name = cog_name.lower()
+            if cog_name in self.loadable_cogs:
+                cog_dir = self.loadable_cogs_dir
+                cog_file_path = self.loadable_cogs[cog_name]
+                cog_name = cog_file_path.split(".")[0]
+
+                try:
+                    await self.bot.reload_extension(name=f"{cog_dir}.{cog_file_path}")
+                except commands.ExtensionNotLoaded as e:
+                    message = f"Cog '{cog_name}' cannot be reloaded: Cog '{cog_name}' has not been loaded."
+                    raise e
+                except Exception as e:
+                    message = f"Cog '{cog_name}' cannot be reloaded: {e}"
+                    raise e
+                else:
+                    message = f"Cog '{cog_name}' has been reloaded."
+                finally:
+                    embed = discord.Embed(description=message,color=0x9C84EF)
+                    await ctx.send(embed=embed, ephemeral=True)
+            else:
+                message = f"Cog '{cog_name}' does not exist."
+                embed = discord.Embed(description=message, color=0x9C84EF)
                 await ctx.send(embed=embed, ephemeral=True)
                 raise commands.CommandError(f"Cog '{cog_name}' does not exist")
 
