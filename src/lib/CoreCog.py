@@ -257,7 +257,15 @@ class CoreCog(commands.Cog, name='core'):
             await ctx.send(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot):
+    """Load the cog
+
+    Args:
+        bot (commands.Bot): bot instance
+    """
+    # load the cog
     corecog = CoreCog(bot)
     await bot.add_cog(corecog)
+
+    # update the translation corpus
     bot.tree.translator.update_corpus(TranslationContextLocation.group_name, corecog.localized_group_name)
     bot.tree.translator.update_corpus(TranslationContextLocation.command_name, corecog.localized_command_name)
