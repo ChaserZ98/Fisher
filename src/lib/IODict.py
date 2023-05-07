@@ -1,7 +1,6 @@
 from enum import Enum
-from typing import Union
 
-from ..utils.io_utils import dump_data
+from utils.io_utils import dump_data
 
 class SerializationType(Enum):
     JSON = 'json'
