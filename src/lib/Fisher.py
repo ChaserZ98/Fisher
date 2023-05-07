@@ -78,6 +78,13 @@ class Fisher(commands.Bot):
         await self.load_extension('lib.CoreCog')
         self.logger.info("Bot core commands loaded")
 
+        self.logger.info("Loading default cogs...")
+        for cog in self.config['extensions']['cogs']:
+            cog_name = cog.split(".")[0]
+            await self.load_extension(name=f"cogs.{cog}")
+            self.logger.info(f"Cog '{cog_name}' loaded")
+        self.logger.info("Default cogs loading complete")
+
         if self.config["sync_commands_globally"]:
             self.logger.info("Syncing commands globally...")
             await self.tree.sync()
