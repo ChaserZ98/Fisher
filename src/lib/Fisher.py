@@ -36,6 +36,7 @@ class Fisher(commands.Bot):
         
         self.logger = logger
         self.config = config
+        self.statues = ["fishing", 'fishing a fish', 'fishing a fish fishing', 'fishing a fish fishing a fish', 'fishing a SpongeBob!!!']
 
     @property
     def logger(self) -> logging.Logger:
@@ -89,12 +90,10 @@ class Fisher(commands.Bot):
         
         self.status_task.start()
         self.logger.info("Bot status loop started")
-        
     
     @tasks.loop(minutes=30.0)
     async def status_task(self):
-        statues = ["fishing", 'fishing a fish', 'fishing a fish fishing', 'fishing a fish fishing a fish', 'fishing a SpongeBob!!!']
-        await self.change_presence(activity=discord.Game(random.choice(statues)))
+        await self.change_presence(activity=discord.Game(random.choice(self.statues)))
 
     async def on_command_completion(self, ctx: Context):
         full_command_name = ctx.command.qualified_name
