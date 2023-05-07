@@ -101,14 +101,19 @@ class CoreCog(commands.Cog, name='core'):
                 commands.CommandError: invalid sync subcommand called
             """
             if ctx.invoked_subcommand is None:
-                tokens = ctx.message.content.split(" ")
+                # No valid subcommand called -> either no subcommand or invalid subcommand
+                tokens = ctx.message.content.split(" ") # Split the message into tokens
+                
                 if len(tokens) > 1:
+                    # more than one token, invalid subcommand
                     embed = discord.Embed(
                         description=f"Invalid subcommand: {tokens[1]}",
                         color=0x9C84EF
                     )
                     await ctx.send(embed=embed, ephemeral=True)
                     raise commands.CommandError(f"Invalid subcommand: {tokens[1]}")
+                
+                # No valid subcommand called, default to sync_guild
                 await sync_guild(ctx, guild_id=ctx.guild.id)
         
         @sync.command(
@@ -127,8 +132,10 @@ class CoreCog(commands.Cog, name='core'):
                 guild_id (int, optional): ID of the server. Defaults to commands.parameter(default=lambda ctx: ctx.guild.id).
             """
             guild = self.bot.get_guild(guild_id)
-            self.bot.tree.copy_global_to(guild=guild)
-            await self.bot.tree.sync(guild=guild)
+
+            self.bot.tree.copy_global_to(guild=guild)   # Copy global commands to the guild
+            await self.bot.tree.sync(guild=guild)   # Sync the commands to the guild
+            
             embed = discord.Embed(
                 description=f"Slash commands have been synchronized in {guild}",
                 color=0x9C84EF
@@ -146,7 +153,8 @@ class CoreCog(commands.Cog, name='core'):
             Args:
                 ctx (commands.Context): context of the command
             """
-            await self.bot.tree.sync()
+            await self.bot.tree.sync()  # Sync the commands globally
+            
             embed = discord.Embed(
                 description="Slash commands have been globally synchronized.",
                 color=0x9C84EF
