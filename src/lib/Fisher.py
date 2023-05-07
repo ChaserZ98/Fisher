@@ -105,7 +105,8 @@ class Fisher(commands.Bot):
             self.logger.info(f"Executed {executed_command} command by {ctx.author} (ID: {ctx.author.id}) in DMs")
     
     async def on_command_error(self, ctx: Context, exception) -> None:
-        self.logger.warning(f"User: {ctx.author} (ID: {ctx.author.id}) Guild: {ctx.guild.name} (ID: {ctx.guild.id}) Command: {ctx.message.content} Exception: {exception}")
+        command = ctx.message.content if ctx.message.content else ctx.command.qualified_name + " ".join(ctx.command.params.values())
+        self.logger.warning(f"User: {ctx.author} (ID: {ctx.author.id}) Guild: {ctx.guild.name} (ID: {ctx.guild.id}) Command: '{ctx.message.content}' Exception: {exception}")
         # if isinstance(exception, commands.CommandOnCooldown):
         #     minutes, seconds = divmod(exception.retry_after, 60)
         #     hours, minutes = divmod(minutes, 60)
