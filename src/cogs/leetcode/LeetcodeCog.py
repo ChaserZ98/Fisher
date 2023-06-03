@@ -20,8 +20,6 @@ from discord.ext import commands
 from pytz import all_timezones
 
 from cogs.leetcode.lib.Leetcode import Leetcode
-from cogs.leetcode.utils import utils as lc_utils
-from lib.IODict import SerializationType
 
 class LeetcodeCog(commands.Cog, name='leetcode'):
     def __init__(
