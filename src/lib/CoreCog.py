@@ -127,14 +127,15 @@ class CoreCog(commands.Cog, name='core'):
         @is_owner(self.bot.config['owners'])
         async def sync_guild(
             ctx: commands.Context,
-            guild_id: int=commands.parameter(default=lambda ctx: ctx.guild.id)
+            guild_id: str=commands.parameter(default=lambda ctx: ctx.guild.id)
         ) -> None:
             """Syncronize the slash commands for a specific server
 
             Args:
                 ctx (commands.Context): context of the command
-                guild_id (int, optional): ID of the server. Defaults to commands.parameter(default=lambda ctx: ctx.guild.id).
+                guild_id (str, optional): ID of the server. Defaults to commands.parameter(default=lambda ctx: ctx.guild.id).
             """
+            guild_id = int(guild_id)
             guild = self.bot.get_guild(guild_id)
 
             self.bot.tree.copy_global_to(guild=guild)   # Copy global commands to the guild
