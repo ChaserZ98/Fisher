@@ -7,6 +7,9 @@
         "sync_commands_globally": false,
         "use_translator": true,
         "dev_channel_id": 0,
+        "bot_status": [
+            "online"
+        ],
         "extensions": {
             "cogs": []
         },
@@ -20,6 +23,14 @@
         "application_id": 0,
         "permissions": 0,
         "sync_commands_globally": false,
+        "use_translator": true,
+        "dev_channel_id": 0,
+        "bot_status": [
+            "online"
+        ],
+        "extensions": {
+            "cogs": []
+        },
         "owners": [
             0
         ]
