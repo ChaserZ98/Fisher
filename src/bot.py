@@ -27,6 +27,7 @@ src_dir = os.path.realpath(os.path.dirname(__file__))
 home_dir = os.path.realpath(os.path.join(src_dir, '..'))
 log_dir = os.path.join(home_dir, 'log')
 config_dir = os.path.join(home_dir, 'config')
+data_dir = os.path.join(home_dir, 'data')
 
 logger = init_logger(logger_name='Fisher', log_dir=log_dir)
 logger.info("Logger loaded")
@@ -56,7 +57,9 @@ try:
     bot = Fisher(
         intents=intents,
         logger=logger,
-        config=config
+        config=config,
+        bot_status=config['bot_status'],
+        data_dir=data_dir,
     )
 except Exception as e:
     logger.error(f"Bot instatiation failed: {e}")

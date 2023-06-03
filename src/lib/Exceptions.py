@@ -23,3 +23,9 @@ class UserBlackListed(commands.CheckFailure):
     def __init__(self, message="User is blacklisted"):
         self.message = message
         super().__init__(self.message)
+
+class ModuleCommandException(commands.CommandError):
+    def __init__(self, log_message: str, user_message: str, module_name: str):
+        super().__init__(log_message)
+        self.user_message = user_message
+        self.module_name = module_name

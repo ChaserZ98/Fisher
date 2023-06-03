@@ -14,6 +14,7 @@
 
 from typing import Callable, TypeVar
 
+import discord
 from discord.ext import commands
 
 from lib.Exceptions import UserNotOwner
@@ -26,3 +27,16 @@ def is_owner(owners: list) -> Callable[[T], T]:
             raise UserNotOwner
         return True
     return commands.check(predicate)
+
+async def set_role(guild: discord.Guild, name: str, color: discord.Color=discord.Color.default(), hoist: bool=False, mentionable: bool=False, reason: str=None) -> discord.Role:
+    for role in guild.roles:
+        if role.name == name:
+            await role.delete()
+            break
+    return await guild.create_role(
+        name=name,
+        color=color,
+        hoist=hoist,
+        mentionable=mentionable,
+        reason=reason
+    )

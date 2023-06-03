@@ -16,27 +16,24 @@ from enum import Enum
 
 from utils.io_utils import dump_data
 
-class SerializationType(Enum):
+class SerializationType(str, Enum):
     JSON = 'json'
     PKL = 'pkl'
 
 class IODict(dict):
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, sync: bool = True):
         super().__init__()
         self.file_path = file_path
-    
-    @property
-    def file_path(self):
-        return self._file_path
-    
-    @file_path.setter
-    def path(self, val):
-        self._file_path = val
+        if sync:
+            self.sync()
 
     def __setitem__(self, key, value) -> None:
         super().__setitem__(key, value)
-        dump_data(data=self, file_path=self.file_path)
+        self.sync()
     
     def __delitem__(self, key) -> None:
         super().__delitem__(key)
+        self.sync()
+    
+    def sync(self) -> None:
         dump_data(data=self, file_path=self.file_path)

@@ -23,6 +23,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import Context
 
 from lib.Translator import FisherTranslator
+from lib.Exceptions import ModuleCommandException
 from utils.discord_utils import is_owner
 
 class Fisher(commands.Bot):
@@ -30,13 +31,19 @@ class Fisher(commands.Bot):
             self,
             intents: discord.Intents,
             logger: logging.Logger,
-            config: dict
+            config: dict,
+            bot_status: list,
+            data_dir: str,
     ):
         super().__init__(command_prefix=config['prefix'], description=config['description'], intents=intents)
         
         self.logger = logger
+        
         self.config = config
-        self.statues = ["fishing", 'fishing a fish', 'fishing a fish fishing', 'fishing a fish fishing a fish', 'fishing a SpongeBob!!!']
+        
+        self.bot_status = bot_status
+
+        self.data_dir = data_dir
 
     @property
     def logger(self) -> logging.Logger:
@@ -53,6 +60,22 @@ class Fisher(commands.Bot):
     @config.setter
     def config(self, val: dict):
         self._config = val
+
+    @property
+    def bot_status(self) -> list:
+        return self._bot_status
+    
+    @bot_status.setter
+    def bot_status(self, val: list):
+        self._bot_status = val
+    
+    @property
+    def data_dir(self) -> str:
+        return self._data_dir
+    
+    @data_dir.setter
+    def data_dir(self, val: str):
+        self._data_dir = val
     
     @property
     def start_time(self) -> float:
@@ -100,20 +123,41 @@ class Fisher(commands.Bot):
     
     @tasks.loop(minutes=30.0)
     async def status_task(self):
-        await self.change_presence(activity=discord.Game(random.choice(self.statues)))
+        await self.change_presence(activity=discord.Game(random.choice(self.bot_status)))
 
     async def on_command_completion(self, ctx: Context):
-        full_command_name = ctx.command.qualified_name
-        split = full_command_name.split(" ")
-        executed_command = str(split[0])
-        if ctx.guild is not None:
-            self.logger.info(f"Executed {executed_command} command in {ctx.guild.name} (ID: {ctx.guild.id}) by {ctx.author} (ID: {ctx.author.id})")
+        if ctx.message.content:
+            command = ctx.message.content
+            command_type = "prefix command"
         else:
-            self.logger.info(f"Executed {executed_command} command by {ctx.author} (ID: {ctx.author.id}) in DMs")
+            command = ctx.prefix + ctx.command.qualified_name + " " + " ".join(map(lambda item: f"{str(item[0])}:{str(item[1])}", ctx.kwargs.items()))
+            command_type = "slash command"
+        
+        if ctx.guild is not None:
+            self.logger.info(f"Executed {command_type} '{command}' in {ctx.guild.name} (Guild ID: {ctx.guild.id}) by {ctx.author} (User ID: {ctx.author.id})")
+        else:
+            self.logger.info(f"Executed {command_type} '{command}' by {ctx.author} (User ID: {ctx.author.id}) in DMs")
     
     async def on_command_error(self, ctx: Context, exception) -> None:
-        command = ctx.message.content if ctx.message.content else ctx.command.qualified_name + " ".join(ctx.command.params.values())
-        self.logger.warning(f"User: {ctx.author} (ID: {ctx.author.id}) Guild: {ctx.guild.name} (ID: {ctx.guild.id}) Command: '{ctx.message.content}' Exception: {exception}")
+        if ctx.message.content:
+            command = ctx.message.content
+            command_type = "Prefix command"
+        else:
+            command = ctx.prefix + ctx.command.qualified_name + " " + " ".join(map(lambda item: f"{str(item[0])}:{str(item[1])}", ctx.kwargs.items()))
+            command_type = "Slash command"
+        
+        if ctx.guild is not None:
+            self.logger.warning(f"User: {ctx.author} (ID: {ctx.author.id}) Guild: {ctx.guild.name} (ID: {ctx.guild.id}) {command_type}: '{command}' Exception: {exception}")
+        else:
+            self.logger.warning(f"User: {ctx.author} (ID: {ctx.author.id}) {command_type}: '{command}' Exception: {exception}")
+        
+        if isinstance(exception, ModuleCommandException):
+            user_message = f"An error occurred while executing the command \n'{command}'\nError: {exception.user_message}"
+        else:
+            user_message = f"An internal error occurred while executing the command \n'{command}'"
+
+        await ctx.send(user_message, ephemeral=True)
+
         # if isinstance(exception, commands.CommandOnCooldown):
         #     minutes, seconds = divmod(exception.retry_after, 60)
         #     hours, minutes = divmod(minutes, 60)
