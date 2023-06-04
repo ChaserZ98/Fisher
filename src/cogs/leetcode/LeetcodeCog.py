@@ -90,6 +90,10 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
                 'en-US': 'leaderboard',
                 'zh-CN': '排行榜'
             },
+            'daily-progress': {
+                'en-US': 'daily-progress',
+                'zh-CN': '每日进度'
+            },
             'score': {
                 'en-US': 'score',
                 'zh-CN': '分数'
@@ -288,6 +292,18 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
         )
         async def show_leaderboard(ctx : commands.Context) -> None:
             await ctx.send(self.leetcode_module.get_leaderboard(ctx.guild))
+
+        @leetcode.command(
+            name='daily-progress',
+            aliases=['p', 'progress'],
+            brief='daily progress command.',
+            description='show daily progress.'
+        )
+        async def show_daily_progress(ctx : commands.Context) -> None:
+            await ctx.defer(ephemeral=True)
+            user_message, log_message = self.leetcode_module.get_daily_progress(ctx.guild)
+            self.bot.logger.info(log_message)
+            await ctx.send(user_message, ephemeral=True)
 
         @leetcode.command(
             name='today',

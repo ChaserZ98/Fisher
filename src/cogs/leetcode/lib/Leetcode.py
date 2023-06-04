@@ -367,6 +367,13 @@ class Leetcode:
         return user_message, log_message
 
     def get_participants(self, guild: discord.Guild):
+        if guild.id not in self.guilds:
+            raise ModuleCommandException(
+                log_message=f"Guild {guild.id} has not been initialized.",
+                user_message=f"Guild has not been initialized.",
+                module_name=self.module_data_dir_name
+            )
+        
         leetcode_role = guild.get_role(self.guilds[guild.id].config['leetcode_role_id'])
 
         if len(leetcode_role.members) == 0:
@@ -406,6 +413,45 @@ class Leetcode:
         message += f" (total participants: {len(rank)}): {names}"
 
         return message
+
+    def get_daily_progress(self, guild: discord.Guild):
+        if guild.id not in self.guilds:
+            raise ModuleCommandException(
+                log_message=f"Guild {guild.id} has not been initialized.",
+                user_message=f"Guild has not been initialized.",
+                module_name=self.module_data_dir_name
+            )
+        
+        daily_report = self.guilds[guild.id].daily_report
+        if len(daily_report) == 0:
+            user_message = "No participants yet."
+            log_message = f"Get daily progress in guild {guild.id} successfully."
+            return user_message, log_message
+        
+        completedUsers = ""
+        completedCount = 0
+        uncompletedUsers = ""
+        uncompletedCount = 0
+
+        for user_id, value in daily_report.items():
+            user = guild.get_member(int(user_id))
+            if value == 1:
+                completedCount += 1
+                completedUsers += f"\n{completedCount}. {user.name}"
+            else:
+                uncompletedCount += 1
+                uncompletedUsers += f"\n{uncompletedCount}. {user.name}"
+
+        user_message = "Daily progress"
+
+        if completedCount > 0:
+            user_message += f"\nCompleted participants (total: {completedCount}): {completedUsers}"
+        if uncompletedCount > 0:
+            user_message += f"\nUncompleted participants (total: {uncompletedCount}): {uncompletedUsers}"
+
+        log_message = f"Get daily progress in guild {guild.id} successfully."
+
+        return user_message, log_message
 
     def get_daily_coding_challenge(self, use_cache: bool = True) -> discord.Embed:
         if use_cache and self.daily_coding_challenge_cache:
