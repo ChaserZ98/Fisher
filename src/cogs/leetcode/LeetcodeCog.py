@@ -178,8 +178,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='show help message.'
         )
         async def help(ctx: commands.Context) -> None:
-            await ctx.defer()
-            
+            await ctx.defer(ephemeral=True)
             embed = discord.Embed(
                 title='Leetcode Help',
                 description='Leetcode module help message.',
