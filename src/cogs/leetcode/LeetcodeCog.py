@@ -170,7 +170,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
                 if len(tokens) > 1:
                     await ctx.send(f'Unknown leetcode subcommand: {tokens[1]}', ephemeral=True)
                     raise commands.CommandError(f"Invalid subcommand: {tokens[1]}")
-                await ctx.send_help(self)
+                await help(ctx)
         
         @leetcode.command(
             name='help',
@@ -178,7 +178,20 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='show help message.'
         )
         async def help(ctx: commands.Context) -> None:
-            await ctx.send_help(leetcode)
+            await ctx.defer()
+            
+            embed = discord.Embed(
+                title='Leetcode Help',
+                description='Leetcode module help message.',
+                color=discord.Color.blue()
+            )
+            embed.add_field(
+                name='Command List',
+                value='```' + '\n'.join([f'{command.name} - {command.description}' for command in leetcode.commands]) + '```',
+                inline=False
+            )
+
+            await ctx.send(embed=embed, ephemeral=True)
             self.bot.logger.info(f'Help message sent in guild {ctx.guild.id}.')
 
         @leetcode.command(
