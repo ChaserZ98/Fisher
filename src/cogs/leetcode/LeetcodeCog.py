@@ -344,9 +344,10 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='submit the leetcode solution.'
         )
         async def submit(ctx : commands.Context, url: str) -> None:
+            await ctx.defer(ephemeral=True)
             user_message, user_embed, log_message = self.leetcode_module.submit_solution(ctx.guild, ctx.author, url)
             self.bot.logger.info(log_message)
-            await ctx.send(user_message)
+            await ctx.send(user_message, ephemeral=True)
             if user_embed is not None:
                 leetcode_channel = self.bot.get_channel(self.leetcode_module.guilds[ctx.guild.id].config['leetcode_channel_id'])
                 await leetcode_channel.send(embed=user_embed)
