@@ -383,6 +383,13 @@ class Leetcode:
         return message
 
     def get_leaderboard(self, guild: discord.Guild):
+        if guild.id not in self.guilds:
+            raise ModuleCommandException(
+                log_message=f"Guild {guild.id} has not been initialized.",
+                user_message=f"Guild has not been initialized.",
+                module_name=self.module_data_dir_name
+            )
+        
         history_score = self.guilds[guild.id].history_score
         if len(history_score) == 0:
             return "No participants yet."
