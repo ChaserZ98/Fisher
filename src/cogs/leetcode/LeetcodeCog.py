@@ -312,7 +312,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='get the leetcode submission with the specific submission id.'
         )
         async def get_submission(ctx : commands.Context, submission_id: int) -> None:
-            await ctx.send(embed=self.leetcode_module.get_submission(submission_id))
+            await ctx.send(embed=self.leetcode_module.get_submission(ctx.guild, submission_id))
 
         @leetcode.command(
             name='info',

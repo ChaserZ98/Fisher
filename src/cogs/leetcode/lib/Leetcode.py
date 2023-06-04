@@ -24,6 +24,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 import discord
 from discord.ext import commands
+from pytz import timezone
 
 from cogs.leetcode.lib.LeetcodeGuild import LeetcodeGuild
 from lib.Exceptions import ModuleCommandException
@@ -313,7 +314,7 @@ class Leetcode:
                 module_name=self.module_data_dir_name
             )
         
-        user_embed = self.get_submission(submission_id)
+        user_embed = self.get_submission(guild, submission_id)
 
         if self.guilds[guild.id].daily_report[user.id] == 1:
             user_message = f'You have already submitted your solution today.'
@@ -710,7 +711,7 @@ class Leetcode:
         
         return user_message
 
-    def get_submission(self, submission_id: int) -> discord.Embed:
+    def get_submission(self, guild: discord.Guild, submission_id: int) -> discord.Embed:
         post_url = self.url + "/graphql"
         data = {
             "operationName": "submissionDetails",
@@ -789,7 +790,8 @@ class Leetcode:
         submission_memory_percentile = data['memoryPercentile']
         submission_author = data['user']['username']
         submission_language = data['lang']['verboseName']
-        submission_time = datetime.fromtimestamp(data['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
+        submission_timezone = self.guilds[guild.id].config['timezone'] if guild.id in self.guilds else 'UTC'
+        submission_time = datetime.fromtimestamp(data['timestamp'], timezone(submission_timezone)).strftime('%Y-%m-%d %H:%M:%S')
         submission_code = data['code']
 
         embed = discord.Embed()
@@ -862,7 +864,7 @@ class Leetcode:
         }
         embed.add_field(**code_field)
 
-        embed.set_footer(text=f'{submission_time} | {submission_id}')
+        embed.set_footer(text=f'{submission_time} {submission_timezone} | {submission_id}')
 
         return embed
         
