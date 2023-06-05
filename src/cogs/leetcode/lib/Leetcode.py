@@ -56,12 +56,10 @@ class Leetcode:
         
         self.guilds = {}
         for guild in os.listdir(data_dir_path):
-            guild_module_data_dir_path = os.path.join(data_dir_path, guild, module_data_dir_name)
-            if os.path.exists(guild_module_data_dir_path):
-                try:
-                    self.guilds[int(guild)] = LeetcodeGuild.from_file(guild_module_data_dir_path, config_file_name)
-                except Exception as e:
-                    print(f'Error loading guild {guild}: {e}')
+            try:
+                self.resume(int(guild), config_file_name)
+            except Exception as e:
+                print(f'Error loading guild {guild}: {e}')
     
     async def initialize(
             self,
