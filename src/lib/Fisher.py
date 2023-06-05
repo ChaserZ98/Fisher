@@ -100,6 +100,14 @@ class Fisher(commands.Bot):
 
         await self.load_extension('lib.CoreCog')
         self.logger.info("Bot core commands loaded")
+    
+    async def on_ready(self):
+        self.logger.info(f"Bot {self.user.name} is ready to use")
+        main_channel = self.get_channel(self.config['dev_channel_id'])
+        await main_channel.send(f"{self.user.name} has connected to Discord!")
+        
+        self.status_task.start()
+        self.logger.info("Bot status loop started")
 
         self.logger.info("Loading default cogs...")
         for cog in self.config['extensions']['cogs']:
@@ -112,14 +120,6 @@ class Fisher(commands.Bot):
             self.logger.info("Syncing commands globally...")
             await self.tree.sync()
             self.logger.info("Successfully Sync commands globally")
-    
-    async def on_ready(self):
-        self.logger.info(f"Bot {self.user.name} is ready to use")
-        main_channel = self.get_channel(self.config['dev_channel_id'])
-        await main_channel.send(f"{self.user.name} has connected to Discord!")
-        
-        self.status_task.start()
-        self.logger.info("Bot status loop started")
     
     @tasks.loop(minutes=30.0)
     async def status_task(self):

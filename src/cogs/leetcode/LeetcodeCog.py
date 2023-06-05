@@ -32,6 +32,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
         self.bot = bot
 
         self.leetcode_module = Leetcode(
+            self.bot,
             self.bot.data_dir,
             module_data_dir_name,
             module_guild_config_file_name,
