@@ -32,6 +32,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
         self.bot = bot
 
         self.leetcode_module = Leetcode(
+            self.bot,
             self.bot.data_dir,
             module_data_dir_name,
             module_guild_config_file_name,
@@ -213,7 +214,8 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='resume the leetcode module in the current guild.'
         )
         async def resume(ctx: commands.Context) -> None:
-            message = await self.leetcode_module.resume(ctx.guild)
+            await ctx.defer(ephemeral=True)
+            message = self.leetcode_module.resume(ctx.guild)
             self.bot.logger.info(f'Leetcode module resumed in guild {ctx.guild.id}.')
             await ctx.send(message, ephemeral=True)
 

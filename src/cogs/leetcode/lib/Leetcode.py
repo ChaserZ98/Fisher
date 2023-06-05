@@ -34,6 +34,7 @@ class Leetcode:
     __slots__ = ('url', 'EMBED_FIELD_VALUE_LIMIT', 'guilds', 'scheduler', 'data_dir_path', 'module_data_dir_name', 'daily_coding_challenge_cache', 'leetcode_session')
     def __init__(
         self,
+        bot: commands.Bot,
         data_dir_path: str,
         module_data_dir_name: str = 'leetcode',
         config_file_name: str = 'config.json',
@@ -59,9 +60,10 @@ class Leetcode:
             guild_module_data_dir_path = os.path.join(data_dir_path, guild, module_data_dir_name)
             if os.path.exists(guild_module_data_dir_path):
                 try:
-                    self.guilds[int(guild)] = LeetcodeGuild.from_file(guild_module_data_dir_path, config_file_name)
+                    guild = bot.get_guild(int(guild))
+                    self.resume(guild, config_file_name)
                 except Exception as e:
-                    print(f'Error loading guild {guild}: {e}')
+                    bot.logger.error(f'Leetcode: Failed to resume guild {guild.id}: {e}')
     
     async def initialize(
             self,
