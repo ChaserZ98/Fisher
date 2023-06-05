@@ -371,7 +371,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
         @set_config.command(
             name='timezone',
             brief='timezone command.',
-            description='set timezone for the daily challenge.'
+            description='set timezone for the daily challenge. (default: UTC)'
         )
         @discord.app_commands.autocomplete(timezone=timezone_autocomplete)
         async def set_timezone(ctx: commands.Context, timezone: str) -> None:

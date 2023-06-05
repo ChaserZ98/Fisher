@@ -112,8 +112,8 @@ class GuildConfigDict(IODict):
         leetcode_role_id: int,
         leetcode_channel_id: int,
         daily_challenge_status: bool = False,
-        timezone: str = 'America/New_York',
-        start_time: dict = {'hour': "08", 'minute': "00", 'second': "00"},
+        timezone: str = 'UTC',
+        start_time: dict = {'hour': "00", 'minute': "00", 'second': "00"},
         end_time: dict = {'hour': "23", 'minute': "59", 'second': "59"},
         remind_time: dict = {'hour': "23", 'minute': "00", 'second': "00"},
         daily_report_file_name: str = "daily report.json",
@@ -127,8 +127,8 @@ class GuildConfigDict(IODict):
             leetcode_role_id (int): leetcode role id
             leetcode_channel_id (int): leetcode channel id
             daily_challenge_status (bool, optional): daily challenge status. Defaults to False.
-            timezone (str, optional): timezone used for daily challenge. Defaults to 'America/New_York'.
-            start_time (dict, optional): daily challenge start time. Defaults to {'hour': "08", 'minute': "00", 'second': "00"}.
+            timezone (str, optional): timezone used for daily challenge. Defaults to 'UTC'.
+            start_time (dict, optional): daily challenge start time. Defaults to {'hour': "00", 'minute': "00", 'second': "00"}.
             end_time (dict, optional): daily challenge end time. Defaults to {'hour': "23", 'minute': "59", 'second': "59"}.
             remind_time (dict, optional): daily challenge remind time. Defaults to {'hour': "23", 'minute': "00", 'second': "00"}.
             daily_report_file_name (str, optional): daily report file name. Defaults to "daily report".
