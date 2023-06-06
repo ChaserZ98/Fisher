@@ -917,6 +917,10 @@ class Leetcode:
             'value': f"```{highlight_type}\n{submission_code}```",
             'inline': False
         }
+        # omit the part of code if the field value is longer than the limit
+        if len(code_field['value']) > self.EMBED_FIELD_VALUE_LIMIT:
+            code_field['value'] = code_field['value'][:self.EMBED_FIELD_VALUE_LIMIT - 6] + '...```'
+        
         embed.add_field(**code_field)
 
         embed.set_footer(text=f'{submission_time} {submission_timezone} | {submission_id}')
