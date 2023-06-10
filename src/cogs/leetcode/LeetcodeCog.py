@@ -255,7 +255,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='set current channel as the channel for the leetcode daily challenge.'
         )
         async def channel(ctx : commands.Context) -> None:
-            message = await self.leetcode_module.set_channel(ctx)
+            message = self.leetcode_module.set_channel(ctx)
             await ctx.send(message, ephemeral=True)
         
         @leetcode.command(
@@ -264,7 +264,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='start the daily challenge.'
         )
         async def start(ctx : commands.Context) -> None:
-            message = await self.leetcode_module.add_leetcode_schedule(ctx.guild)
+            message = self.leetcode_module.add_leetcode_schedule(ctx.guild)
             await ctx.send(message)
         
         @leetcode.command(
@@ -273,7 +273,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='stop the daily challenge.'
         )
         async def stop(ctx : commands.Context) -> None:
-            user_message, log_message = await self.leetcode_module.remove_leetcode_schedule(ctx.guild)
+            user_message, log_message = self.leetcode_module.remove_leetcode_schedule(ctx.guild)
             self.bot.logger.info(log_message)
             await ctx.send(user_message)
         
@@ -377,7 +377,7 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
         )
         @discord.app_commands.autocomplete(timezone=timezone_autocomplete)
         async def set_timezone(ctx: commands.Context, timezone: str) -> None:
-            user_message, log_message = await self.leetcode_module.set_timezone(ctx.guild, timezone)
+            user_message, log_message = self.leetcode_module.set_timezone(ctx.guild, timezone)
             self.bot.logger.info(log_message)
             await ctx.send(user_message, ephemeral=True)
 
