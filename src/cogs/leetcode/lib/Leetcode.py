@@ -848,6 +848,8 @@ class Leetcode:
         submission_timezone = self.guilds[guild.id].config['timezone'] if guild.id in self.guilds else 'UTC'
         submission_time = datetime.fromtimestamp(data['timestamp'], timezone(submission_timezone)).strftime('%Y-%m-%d %H:%M:%S')
         submission_code = data['code']
+        submission_notes = data['notes']
+        submission_topic_tags = data['topicTags']
 
         embed = discord.Embed()
 
@@ -911,19 +913,59 @@ class Leetcode:
 
         highlight_type = support_highlight.get(submission_language.lower(), submission_language.lower())
 
+        code_value = self.generate_embed_text_value(highlight_type + "\n" + submission_code, render_type='markdown')
+
         # code field
         code_field = {
             'name': f"Submission code ({submission_language})",
-            'value': f"```{highlight_type}\n{submission_code}```",
+            'value': code_value,
             'inline': False
         }
-        # omit the part of code if the field value is longer than the limit
-        if len(code_field['value']) > self.EMBED_FIELD_VALUE_LIMIT:
-            code_field['value'] = code_field['value'][:self.EMBED_FIELD_VALUE_LIMIT - 6] + '...```'
         
         embed.add_field(**code_field)
 
+
+        if submission_notes:
+            notes_value = self.generate_embed_text_value(submission_notes, render_type='markdown')
+            notes_field = {
+                'name': f"Notes",
+                'value': notes_value,
+                'inline': False
+            }
+            embed.add_field(**notes_field)
+        
+        if submission_topic_tags:
+
+            tags_value = ""
+            for i in range(len(submission_topic_tags)):
+                value = f"[{submission_topic_tags[i]['name']}]({self.url}/tag/{submission_topic_tags[i]['slug']}/)"
+                if len(tags_value) + len(value) > self.EMBED_FIELD_VALUE_LIMIT:
+                    break
+                tags_value += value
+                if i != len(submission_topic_tags) - 1 and len(tags_value) + len(value) + 2 <= self.EMBED_FIELD_VALUE_LIMIT:
+                    tags_value += ', '
+
+            topic_tags_field = {
+                'name': f"Related tags",
+                'value': tags_value,
+                'inline': False
+            }
+            embed.add_field(**topic_tags_field)
+        
         embed.set_footer(text=f'{submission_time} {submission_timezone} | {submission_id}')
 
         return embed
         
+    def generate_embed_text_value(self, text: str, render_type: str='plain_text'):
+        length = len(text)
+        
+        if render_type == 'markdown':
+            if length + 6 > self.EMBED_FIELD_VALUE_LIMIT:
+                return f'```{text[:self.EMBED_FIELD_VALUE_LIMIT - 9]}...```'
+            
+            return f'```{text}```'
+        
+        if length > self.EMBED_FIELD_VALUE_LIMIT:
+                return f'{text[:self.EMBED_FIELD_VALUE_LIMIT - 3]}...'
+        
+        return text
