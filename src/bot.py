@@ -12,6 +12,7 @@
 @Desc      :    None
 '''
 
+import asyncio
 import json
 import os
 import sys
@@ -19,9 +20,12 @@ import time
 
 import discord
 from dotenv import load_dotenv
+import uvloop
 
 from lib.Fisher import Fisher
 from utils.log import init_logger
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 src_dir = os.path.realpath(os.path.dirname(__file__))
 home_dir = os.path.realpath(os.path.join(src_dir, '..'))
