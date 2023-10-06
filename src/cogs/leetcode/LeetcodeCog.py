@@ -135,6 +135,14 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
                 'en-US': 'help',
                 'zh-CN': '帮助'
             },
+            'cookie': {
+                'en-US': 'cookie',
+                'zh-CN': 'cookie'
+            },
+            'validate_cookie': {
+                'en-US': 'validate_cookie',
+                'zh-CN': '验证cookie'
+            },
             'test': {
                 'en-US': 'test',
                 'zh-CN': '测试'
@@ -353,6 +361,17 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             if user_embed is not None:
                 leetcode_channel = self.bot.get_channel(self.leetcode_module.guilds[ctx.guild.id].config['leetcode_channel_id'])
                 await leetcode_channel.send(embed=user_embed)
+        
+        @leetcode.command(
+            name='validate_cookie',
+            brief='validate cookie command.',
+            description='validate the leetcode cookie.'
+        )
+        async def validate_cookie(ctx : commands.Context) -> None:
+            await ctx.defer(ephemeral=True)
+            user_message, log_message = self.leetcode_module.get_cookie_status()
+            self.bot.logger.info(log_message)
+            await ctx.send(user_message, ephemeral=True)
 
         @leetcode.group(
             name='set',
@@ -404,6 +423,19 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             user_message, log_message = self.leetcode_module.set_time(ctx.guild, time_type, hour, minute, second)
             self.bot.logger.info(log_message)
             await ctx.send(user_message)
+        
+        @set_config.command(
+            name='cookie',
+            brief='set leetcode cookie.',
+            description='set leetcode cookie to access login-required resources.'
+        )
+        @discord.app_commands.describe(
+            val='leetcode cookie.'
+        )
+        async def set_cookie(ctx: commands.Context, val: str) -> None:
+            user_message, log_message = self.leetcode_module.set_cookie(val)
+            self.bot.logger.info(log_message)
+            await ctx.send(user_message, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

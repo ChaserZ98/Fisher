@@ -12,6 +12,8 @@
 @Desc      :    None
 '''
 
+import sys
+
 import discord
 from discord.app_commands import locale_str, TranslationContextLocation
 from discord.ext import commands
@@ -246,6 +248,9 @@ class CoreCog(commands.Cog, name='core'):
                 cog_name = cog_file_path.split(".")[0]
 
                 try:
+                    for module in list(sys.modules.keys()):
+                        if module.startswith(f"{cog_dir}.{cog_name}"):
+                            del sys.modules[module]
                     await self.bot.unload_extension(name=f"{cog_dir}.{cog_file_path}")
                 except commands.ExtensionNotLoaded:
                     message = f"Cog '{cog_name}' cannot be disabled: Cog '{cog_name}' is not loaded."
@@ -279,6 +284,9 @@ class CoreCog(commands.Cog, name='core'):
                 cog_name = cog_file_path.split(".")[0]
 
                 try:
+                    for module in list(sys.modules.keys()):
+                        if module.startswith(f"{cog_dir}.{cog_name}"):
+                            del sys.modules[module]
                     await self.bot.reload_extension(name=f"{cog_dir}.{cog_file_path}")
                 except commands.ExtensionNotLoaded as e:
                     message = f"Cog '{cog_name}' cannot be reloaded: Cog '{cog_name}' has not been loaded."

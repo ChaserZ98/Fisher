@@ -53,7 +53,7 @@ class Leetcode:
         self.get_daily_coding_challenge(use_cache=False)
 
         self.leetcode_session = requests.Session()
-        self.leetcode_session.cookies.update({'LEETCODE_SESSION': os.getenv('LEETCODE_SESSION')})
+        self.leetcode_session.cookies.set('LEETCODE_SESSION', os.getenv('LEETCODE_SESSION'), path='/', domain='.leetcode.com')
         
         self.guilds = {}
         for guild in os.listdir(data_dir_path):
@@ -65,6 +65,36 @@ class Leetcode:
                 except Exception as e:
                     bot.logger.error(f'Leetcode: Failed to resume guild {guild.id}: {e}')
     
+    def set_cookie(self, val: str):
+        self.leetcode_session.cookies.set('LEETCODE_SESSION', val, path='/', domain='.leetcode.com')
+        user_message, log_message = self.get_cookie_status()
+        return user_message, log_message
+    
+    def get_cookie_status(self):
+        response = self.leetcode_session.get("https://leetcode.com")
+        session_cookie = list(filter(lambda x: x.name == 'LEETCODE_SESSION', self.leetcode_session.cookies))
+        if not session_cookie:
+            user_message = f"Cookie Status: Undefined."
+            log_message = f"Cookie Status: Undefined."
+            return user_message, log_message
+        
+        session_cookie = session_cookie[0]
+        
+        if session_cookie.expires is None:
+            user_message = f"Cookie Status: Invalid. (Expiration time: Unknown)"
+            log_message = f"Cookie Status: Invalid. (Expiration time: Unknown)"
+            return user_message, log_message
+        
+        expire_time = datetime.fromtimestamp(session_cookie.expires)
+        if expire_time <= datetime.now():
+            user_message = f"Cookie Status: Expired. (Expiration time: {expire_time})"
+            log_message = f"Cookie Status: Expired. (Expiration time: {expire_time})"
+        
+        user_message = f"Cookie Status: Valid. (Expiration time: {expire_time})"
+        log_message = f"Cookie Status: Valid. (Expiration time: {expire_time})"
+        return user_message, log_message
+
+
     async def initialize(
             self,
             guild : discord.Guild,
@@ -752,10 +782,26 @@ class Leetcode:
         start_time = self.guilds[guild.id].config['start_time']
         end_time = self.guilds[guild.id].config['end_time']
         remind_time = self.guilds[guild.id].config['remind_time']
+        session_cookie = list(filter(lambda x: x.name == 'LEETCODE_SESSION', self.leetcode_session.cookies))
+        cookie_status = 'undefined'
+        cookie_expire_time = 'Undefined'
+        if session_cookie:
+            session_cookie = session_cookie[0]
+            if session_cookie.expires is None:
+                cookie_status = 'Invalid'
+                cookie_expire_time = 'Unknown'
+            elif datetime.fromtimestamp(session_cookie.expires) <= datetime.now():
+                cookie_status = 'Expired'
+                cookie_expire_time = datetime.fromtimestamp(session_cookie.expires).strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                cookie_status = 'Valid'
+                cookie_expire_time = datetime.fromtimestamp(session_cookie.expires).strftime('%Y-%m-%d %H:%M:%S')
 
-        user_message = f'Leetcode role: {leetcode_role.mention}'
+        user_message = f'Cookie status: {cookie_status} (Expiration time: {cookie_expire_time})'
+        user_message += f'\nLeetcode role: {leetcode_role.mention}'
         user_message += f'\nLeetcode channel: {leetcode_channel.mention}'
         user_message += f'\nTotal members: {len(leetcode_role.members)}'
+        
         if daily_challenge_status:
             user_message += f'\nDaily timezone: {daily_challenge_timezone}'
             user_message += f'\nDaily start time: {":".join(start_time.values())}'
