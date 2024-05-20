@@ -301,7 +301,8 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             description='show history score.'
         )
         async def show_leaderboard(ctx : commands.Context) -> None:
-            await ctx.send(self.leetcode_module.get_leaderboard(ctx.guild))
+            await ctx.defer(ephemeral=True)
+            await ctx.send(self.leetcode_module.get_leaderboard(ctx.guild), ephemeral=True)
 
         @leetcode.command(
             name='daily-progress',
@@ -320,8 +321,8 @@ class LeetcodeCog(commands.Cog, name='leetcode'):
             brief='today command.',
             description='show today\'s leetcode problem.'
         )
-        async def today(ctx: commands.Context) -> None:
-            await ctx.send(embed=self.leetcode_module.get_daily_coding_challenge(), ephemeral=True)
+        async def today(ctx: commands.Context, use_cache: bool=True) -> None:
+            await ctx.send(embed=self.leetcode_module.get_daily_coding_challenge(use_cache), ephemeral=True)
 
         @leetcode.command(
             name='question',

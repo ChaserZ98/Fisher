@@ -54,7 +54,12 @@ class Leetcode:
 
         self.leetcode_session = requests.Session()
         self.leetcode_session.cookies.set('LEETCODE_SESSION', os.getenv('LEETCODE_SESSION'), path='/', domain='.leetcode.com')
-        
+
+        try:
+            self.get_cookie_status()
+        except e:
+            pass
+
         self.guilds = {}
         for guild in os.listdir(data_dir_path):
             guild_module_data_dir_path = os.path.join(data_dir_path, guild, module_data_dir_name)
@@ -71,7 +76,14 @@ class Leetcode:
         return user_message, log_message
     
     def get_cookie_status(self):
-        response = self.leetcode_session.get("https://leetcode.com")
+        response = self.leetcode_session.post(
+            "https://leetcode.com/graphql",
+            json={
+                "query": "query currentTimestamp {currentTimestamp}",
+                "variables": {},
+                "operationName": "currentTimestamp"
+            }
+        )
         session_cookie = list(filter(lambda x: x.name == 'LEETCODE_SESSION', self.leetcode_session.cookies))
         if not session_cookie:
             user_message = f"Cookie Status: Undefined."
@@ -93,7 +105,6 @@ class Leetcode:
         user_message = f"Cookie Status: Valid. (Expiration time: {expire_time})"
         log_message = f"Cookie Status: Valid. (Expiration time: {expire_time})"
         return user_message, log_message
-
 
     async def initialize(
             self,
@@ -521,7 +532,13 @@ class Leetcode:
                 }",
                 "operationName": "questionOfToday"
             }
-            # header = {'content-type': 'application/json'}
+            result = requests.post(post_url, json=data)
+            if not result.ok:
+                raise ModuleCommandException(
+                    log_message=f'Failed to get daily coding challenge: Status code: {result.status_code} Reason: {result.reason}.',
+                    user_message='Failed to get daily coding challenge due to request error.',
+                    module_name=self.module_data_dir_name
+                )
             result = requests.post(post_url, json=data).json()['data']['activeDailyCodingChallengeQuestion']
             self.daily_coding_challenge_cache = result
         question_date = result['date']
